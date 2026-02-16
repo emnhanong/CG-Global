@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Logistics - Doanh Thu & Lợi Nhuận</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-left h1 {
+            font-size: 32px;
+            color: #1e3a8a;
+            margin-bottom: 5px;
+        }
+
+        .header-left p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .exchange-rate {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 20px 30px;
+            border-radius: 15px;
+            color: white;
+            text-align: right;
+        }
+
+        .exchange-rate-label {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .exchange-rate-value {
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .exchange-rate-update {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card.revenue .stat-icon {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .stat-card.profit .stat-icon {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .stat-card.shipments .stat-icon {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .stat-card.pending .stat-icon {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .stat-card.margin .stat-icon {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+
+        .stat-subvalue {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f5f9;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .commission-box {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #3b82f6;
+            margin-bottom: 20px;
+        }
+
+        .commission-result {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #10b981;
+            margin-top: 15px;
+        }
+
+        .shipment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .shipment-table thead {
+            background: #f8fafc;
+        }
+
+        .shipment-table th {
+            padding: 15px 12px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .shipment-table td {
+            padding: 15px 12px;
+            font-size: 14px;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .shipment-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-paid {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-pending {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .profit-positive {
+            color: #10b981;
+            font-weight: 700;
+        }
+
+        .profit-negative {
+            color: #ef4444;
+            font-weight: 700;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 9999;
+            display: none;
+            border-left: 4px solid #10b981;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        .notification.error {
+            border-left-color: #ef4444;
+        }
+
+        .notification.info {
+            border-left-color: #3b82f6;
+            background: #dbeafe;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+
+        .summary-box {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+
+        .summary-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .summary-value {
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+
+            .shipment-table {
+                font-size: 12px;
+            }
+
+            .shipment-table th,
+            .shipment-table td {
+                padding: 10px 8px;
+            }
+        }
+        /* ========== LOGIN SCREEN ========== */
+        .login-overlay {
+            position: fixed; inset: 0;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            z-index: 99999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .login-box {
+            background: white; border-radius: 24px;
+            padding: 48px 40px; width: 100%; max-width: 420px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            animation: fadeUp 0.4s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity:0; transform:translateY(30px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        .login-logo { text-align:center; margin-bottom:28px; }
+        .login-logo h2 { font-size:26px; color:#1e3a8a; font-weight:800; }
+        .login-logo p  { color:#64748b; font-size:13px; margin-top:4px; }
+        .login-tab { display:flex; border-radius:12px; background:#f1f5f9; padding:4px; margin-bottom:28px; }
+        .login-tab button {
+            flex:1; padding:10px; border:none; border-radius:9px;
+            font-size:14px; font-weight:600; cursor:pointer;
+            background:transparent; color:#64748b; transition:all 0.2s;
+        }
+        .login-tab button.active { background:white; color:#1e3a8a; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .login-form-group { margin-bottom:16px; }
+        .login-form-group label { display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:6px; }
+        .login-form-group input {
+            width:100%; padding:13px 15px; border:2px solid #e2e8f0;
+            border-radius:10px; font-size:14px; font-family:'Inter',sans-serif;
+            transition:border-color 0.2s; outline:none;
+        }
+        .login-form-group input:focus { border-color:#3b82f6; }
+        .login-btn {
+            width:100%; padding:14px; background:linear-gradient(135deg,#3b82f6,#2563eb);
+            color:white; border:none; border-radius:10px; font-size:15px;
+            font-weight:700; cursor:pointer; margin-top:8px;
+            transition:transform 0.2s, box-shadow 0.2s;
+        }
+        .login-btn:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(59,130,246,0.35); }
+        .login-error { background:#fef2f2; border:1px solid #fecaca; color:#dc2626;
+            padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px; display:none; }
+        .user-badge {
+            display:flex; align-items:center; gap:8px;
+            background:rgba(255,255,255,0.2); border-radius:10px; padding:8px 14px; cursor:pointer;
+        }
+        .user-badge:hover { background:rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    <!-- LOGIN OVERLAY -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-box">
+            <div class="login-logo">
+                <h2>🚚 Logistics Management</h2>
+                <p>Connect Global - Quản lý doanh thu & lợi nhuận</p>
+            </div>
+            <div class="login-tab">
+                <button class="active" id="tabLogin" onclick="switchTab('login')">Đăng nhập</button>
+                <button id="tabRegister" onclick="switchTab('register')">Đăng ký</button>
+            </div>
+            <div id="loginError" class="login-error"></div>
+
+            <!-- Login Form -->
+            <div id="loginForm">
+                <div class="login-form-group">
+                    <label>Tên đăng nhập</label>
+                    <input type="text" id="loginUser" placeholder="Nhập username" autocomplete="username">
+                </div>
+                <div class="login-form-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" id="loginPass" placeholder="Nhập mật khẩu" autocomplete="current-password"
+                        onkeydown="if(event.key==='Enter') doLogin()">
+                </div>
+                <button class="login-btn" onclick="doLogin()">🔐 Đăng nhập</button>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" style="display:none;">
+                <div class="login-form-group">
+                    <label>Tên đăng nhập</label>
+                    <input type="text" id="regUser" placeholder="Chọn username">
+                </div>
+                <div class="login-form-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" id="regPass" placeholder="Tạo mật khẩu (min 6 ký tự)">
+                </div>
+                <div class="login-form-group">
+                    <label>Xác nhận mật khẩu</label>
+                    <input type="password" id="regPassConfirm" placeholder="Nhập lại mật khẩu"
+                        onkeydown="if(event.key==='Enter') doRegister()">
+                </div>
+                <button class="login-btn" onclick="doRegister()">✅ Tạo tài khoản</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1>🚚 Logistics Management System</h1>
+                <p>Quản lý doanh thu & lợi nhuận hàng hóa</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div class="exchange-rate">
+                    <div class="exchange-rate-label">💱 Tỷ giá USD/VND</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="number" id="exchangeRateInput" value="25300" step="100"
+                            style="width:130px;font-size:22px;font-weight:800;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);border-radius:8px;padding:4px 8px;color:white;text-align:right;outline:none;"
+                            oninput="updateExchangeRate(this.value)">
+                        <span style="font-size:18px;font-weight:700;">₫</span>
+                    </div>
+                    <div class="exchange-rate-update" id="exchangeUpdate">Tỷ giá mặc định</div>
+                </div>
+                <div class="user-badge" onclick="doLogout()" title="Đăng xuất">
+                    <span style="font-size:20px;">👤</span>
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:white;" id="headerUsername">-</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.75);">Đăng xuất ↗</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div class="dashboard">
+            <div class="stat-card revenue">
+                <div class="stat-icon">💰</div>
+                <div class="stat-label">Doanh Thu</div>
+                <div class="stat-value" id="totalRevenue">$0</div>
+                <div class="stat-subvalue" id="totalRevenueVND">0 VNĐ</div>
+            </div>
+            <div class="stat-card profit">
+                <div class="stat-icon">📈</div>
+                <div class="stat-label">Lợi Nhuận</div>
+                <div class="stat-value" id="totalProfit">$0</div>
+                <div class="stat-subvalue" id="totalProfitVND">0 VNĐ</div>
+            </div>
+            <div class="stat-card shipments">
+                <div class="stat-icon">📦</div>
+                <div class="stat-label">Tổng Lô Hàng</div>
+                <div class="stat-value" id="totalShipments">0</div>
+                <div class="stat-subvalue" id="avgProfit">TB: $0/lô</div>
+            </div>
+            <div class="stat-card pending">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-label">Chưa Thanh Toán</div>
+                <div class="stat-value" id="pendingPayments">0</div>
+                <div class="stat-subvalue" id="pendingAmount">$0</div>
+            </div>
+            <div class="stat-card margin">
+                <div class="stat-icon">💹</div>
+                <div class="stat-label">Tỷ Suất LN</div>
+                <div class="stat-value" id="profitMargin">0%</div>
+                <div class="stat-subvalue">Trung bình</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Shipment Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Thêm Lô Hàng Mới</h2>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-success btn-sm" onclick="exportToExcel()">
+                            📥 Xuất Excel
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="recalculateAllProfit()" title="Tính lại lợi nhuận cho tất cả lô hàng theo công thức mới">
+                            🔄 Tính lại Profit
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="clearAllData()">
+                            🗑️ Xóa Tất Cả
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Profit Formula Info -->
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+                    <div style="font-weight: 700; color: #92400e; margin-bottom: 5px; font-size: 13px;">
+                        💡 Công thức tính
+                    </div>
+                    <div style="font-size: 12px; color: #78350f;">
+                        <strong>Purchase Total = (Purchase rate + X-ray rate) × CW + AWB + AMS</strong><br>
+                        <strong>Profit = Selling Total - Purchase Total</strong>
+                    </div>
+                    <div style="font-size: 11px; color: #92400e; margin-top: 5px;">
+                        ℹ️ Purchase rate là giá mua/kg (AF rate)
+                    </div>
+                </div>
+
+                <form id="shipmentForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Company *</label>
+                            <input type="text" class="form-input" id="company" placeholder="Tên công ty" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Customer Name</label>
+                            <input type="text" class="form-input" id="customerName" placeholder="VD: YIYU - Chị Dương">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ready Date *</label>
+                            <input type="date" class="form-input" id="readyDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Carrier</label>
+                            <input type="text" class="form-input" id="carrier" placeholder="Hãng vận chuyển">
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Destination</label>
+                            <input type="text" class="form-input" id="dest" placeholder="Điểm đến">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">MAWB</label>
+                            <input type="text" class="form-input" id="mawb" placeholder="Mã vận đơn">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">GW (kg)</label>
+                            <input type="number" class="form-input" id="gw" placeholder="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">CW (kg) *</label>
+                            <input type="number" class="form-input" id="cw" placeholder="0" step="0.01" required oninput="calculateCommission(); calculateTotalPrices();">
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Purchase Unit Price ($/kg) *</label>
+                            <input type="number" class="form-input" id="purchaseUnitPrice" placeholder="0" step="0.01" required oninput="calculateTotalPrices()" title="Giá mua/kg (AF rate)">
+                            <div style="font-size: 10px; color: #64748b; margin-top: 3px;">
+                                💼 Giá mua/kg (Air Freight rate)
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Selling Unit Price ($/kg) *</label>
+                            <input type="number" class="form-input" id="sellingUnitPrice" placeholder="0" step="0.01" required oninput="calculateTotalPrices()" title="Giá bán cho khách hàng">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Make Unit Price ($/kg) <span style="font-size: 11px; color: #64748b;">Auto</span></label>
+                            <input type="number" class="form-input" id="makeUnitPrice" placeholder="0" step="0.01" readonly style="background: #f1f5f9; cursor: not-allowed;" title="Tự động tính = Selling - Purchase Total/CW (chỉ để tham khảo)">
+                            <div style="font-size: 10px; color: #64748b; margin-top: 3px;">
+                                📊 Auto: Selling - (Purchase Total / CW) (Tham khảo)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Purchase Total (Auto-calculated) -->
+                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #f59e0b;">
+                        <div style="font-weight: 600; color: #92400e; margin-bottom: 8px; font-size: 13px;">
+                            💰 Purchase Total (Tự động tính)
+                        </div>
+                        <div style="font-size: 12px; color: #78350f;">
+                            <strong>Purchase = (Purchase rate × CW) + (X-ray rate × GW) + AWB + AMS</strong>
+                        </div>
+                        <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px;">
+                            <span style="color: #64748b; font-size: 12px;">Purchase Total:</span>
+                            <strong id="purchaseTotalDisplay" style="color: #1e3a8a; margin-left: 5px; font-size: 16px;">$0.00</strong>
+                        </div>
+                    </div>
+
+                    <!-- Display Total Prices -->
+                    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                        <div style="font-weight: 600; color: #1e3a8a; margin-bottom: 10px; font-size: 13px;">
+                            💰 Tổng giá (Auto Calculate)
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 13px;">
+                            <div>
+                                <span style="color: #64748b;">Purchase Total:</span>
+                                <strong id="purchaseTotal" style="color: #64748b; margin-left: 5px;">$0.00</strong>
+                                <div style="font-size: 9px; color: #94a3b8; margin-top: 2px;">Purchase×CW + Xray×GW + AWB + AMS</div>
+                            </div>
+                            <div>
+                                <span style="color: #64748b;">Selling Total:</span>
+                                <strong id="sellingTotal" style="color: #3b82f6; margin-left: 5px;">$0.00</strong>
+                                <div style="font-size: 9px; color: #94a3b8; margin-top: 2px;">Selling×CW + Xray×GW + AWB + AMS</div>
+                            </div>
+                            <div>
+                                <span style="color: #64748b;">Make (Reference):</span>
+                                <strong id="makeTotal" style="color: #94a3b8; margin-left: 5px;">$0.00</strong>
+                                <div style="font-size: 9px; color: #94a3b8; margin-top: 2px;">= Selling Total - Purchase Total</div>
+                            </div>
+                            <div style="border-left: 2px solid #10b981; padding-left: 10px;">
+                                <span style="color: #64748b;">Profit:</span>
+                                <strong id="estimatedProfit" style="color: #10b981; margin-left: 5px; font-size: 15px;">$0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- X-ray, AWB, AMS, Payment Status, Customer Note - Same Row -->
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" style="color: #1e3a8a; font-weight: 600;">X-Ray ($/kg)</label>
+                            <input type="number" class="form-input" id="xray" placeholder="0.017" value="0.017" step="0.001" oninput="calculateTotalPrices()" title="X-ray unit price × GW">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="color: #1e3a8a; font-weight: 600;">AWB ($)</label>
+                            <input type="number" class="form-input" id="awb" placeholder="0" step="0.01" oninput="calculateTotalPrices()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="color: #1e3a8a; font-weight: 600;">AMS ($)</label>
+                            <input type="number" class="form-input" id="ams" placeholder="0" step="0.01" oninput="calculateTotalPrices()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="color: #1e3a8a; font-weight: 600;">Payment Status</label>
+                            <select class="form-select" id="paymentStatus">
+                                <option value="pending">Chưa thanh toán</option>
+                                <option value="paid">Đã thanh toán</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="color: #1e3a8a; font-weight: 600;">Customer Note</label>
+                            <input type="text" class="form-input" id="customerNote" placeholder="Ghi chú">
+                        </div>
+                    </div>
+
+                    <!-- Commission Calculator -->
+                    <div class="commission-box">
+                        <label class="form-label" style="color: #1e3a8a; margin-bottom: 15px; display: block;">💰 Commission Calculator</label>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size: 12px;">Ăn chênh (cent)</label>
+                                <input type="number" class="form-input" id="commissionCent" placeholder="0.05" step="0.01" oninput="calculateCommission()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size: 12px;">Thuế DN (%)</label>
+                                <input type="number" class="form-input" id="commissionTax" placeholder="20" step="1" value="20" oninput="calculateCommission()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size: 12px;">Tỷ giá (VNĐ)</label>
+                                <input type="number" class="form-input" id="commissionRate" placeholder="25000" step="100" oninput="calculateCommission()">
+                            </div>
+                        </div>
+                        <div class="commission-result">
+                            <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
+                                Công thức: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">Cent × CW × (100 - Thuế)% × Tỷ giá</code>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 600; color: #64748b;">Commission:</span>
+                                <span id="calculatedCommission" style="font-size: 20px; font-weight: 800; color: #10b981;">0 VNĐ</span>
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 5px;" id="commissionUSD">≈ $0.00</div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        ➕ Thêm Lô Hàng
+                    </button>
+                </form>
+            </div>
+
+            <!-- Shipment List -->
+            <div class="card" style="margin-top: 30px;">
+                <div class="card-header">
+                    <h2 class="card-title">Danh Sách Lô Hàng</h2>
+                </div>
+
+                <!-- Filters -->
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label class="form-label">Lọc theo tháng</label>
+                        <select class="form-select" id="monthSelect" onchange="filterByMonth(this.value)">
+                            <option value="all">Tất cả các tháng</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tìm kiếm</label>
+                        <input type="text" class="form-input" id="searchInput" placeholder="🔍 Tìm theo công ty, MAWB..." oninput="searchShipments()">
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="summary-box">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a; font-size: 16px;" id="summaryTitle">📊 Tổng Kết</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Doanh thu:</span>
+                            <span class="summary-value" id="monthRevenue">$0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Lợi nhuận:</span>
+                            <span class="summary-value" id="monthProfit">$0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Số lô hàng:</span>
+                            <span class="summary-value" id="monthShipments">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Tỷ suất LN:</span>
+                            <span class="summary-value" id="monthMargin">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="shipment-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Company</th>
+                                <th>MAWB</th>
+                                <th>Dest</th>
+                                <th>CW</th>
+                                <th>Purchase</th>
+                                <th>Make</th>
+                                <th>Revenue</th>
+                                <th>Profit</th>
+                                <th>Com (VNĐ)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shipmentList">
+                            <tr>
+                                <td colspan="12">
+                                    <div class="empty-state">
+                                        <h3>Chưa có lô hàng nào</h3>
+                                        <p>Thêm lô hàng đầu tiên của bạn</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== AUTH ==========
+        // Built-in admin account (stored as seed, users can also register)
+        const ADMIN = { username: 'admin', password: 'Connectglobal@123123' };
+
+        function getUsers() {
+            try { return JSON.parse(localStorage.getItem('lg_users') || '[]'); } catch { return []; }
+        }
+        function saveUsers(u) { localStorage.setItem('lg_users', JSON.stringify(u)); }
+        function getCurrentUser() { return localStorage.getItem('lg_current_user') || null; }
+
+        function switchTab(tab) {
+            document.getElementById('loginForm').style.display    = tab === 'login'    ? '' : 'none';
+            document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+            document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
+            document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function showAuthError(msg) {
+            const el = document.getElementById('loginError');
+            el.textContent = msg; el.style.display = 'block';
+        }
+
+        function doLogin() {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            if (!user || !pass) return showAuthError('Vui lòng nhập đầy đủ thông tin.');
+
+            // Check admin
+            if (user === ADMIN.username && pass === ADMIN.password) {
+                loginSuccess(user); return;
+            }
+            // Check registered users
+            const users = getUsers();
+            const found = users.find(u => u.username === user && u.password === pass);
+            if (found) { loginSuccess(user); return; }
+            showAuthError('Sai tên đăng nhập hoặc mật khẩu.');
+        }
+
+        function doRegister() {
+            const user = document.getElementById('regUser').value.trim();
+            const pass = document.getElementById('regPass').value;
+            const conf = document.getElementById('regPassConfirm').value;
+            if (!user || !pass) return showAuthError('Vui lòng nhập đầy đủ thông tin.');
+            if (pass.length < 6)  return showAuthError('Mật khẩu tối thiểu 6 ký tự.');
+            if (pass !== conf)    return showAuthError('Mật khẩu xác nhận không khớp.');
+            if (user === ADMIN.username) return showAuthError('Tên đăng nhập đã tồn tại.');
+
+            const users = getUsers();
+            if (users.find(u => u.username === user)) return showAuthError('Tên đăng nhập đã tồn tại.');
+
+            users.push({ username: user, password: pass });
+            saveUsers(users);
+            showNotification('✅ Tạo tài khoản thành công! Đăng nhập ngay.', 'success');
+            switchTab('login');
+            document.getElementById('loginUser').value = user;
+        }
+
+        function loginSuccess(username) {
+            localStorage.setItem('lg_current_user', username);
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('headerUsername').textContent = username;
+            showNotification('👋 Xin chào, ' + username + '!');
+        }
+
+        function doLogout() {
+            if (!confirm('Bạn muốn đăng xuất?')) return;
+            localStorage.removeItem('lg_current_user');
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginPass').value = '';
+        }
+
+        function checkAuth() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('headerUsername').textContent = user;
+            } else {
+                document.getElementById('loginOverlay').style.display = 'flex';
+            }
+        }
+
+        // ========== EXCHANGE RATE INPUT ==========
+        function updateExchangeRate(val) {
+            const v = parseFloat(val);
+            if (!isNaN(v) && v > 1000) {
+                exchangeRate = v;
+                document.getElementById('commissionRate').value = v;
+                calculateCommission();
+                updateDashboard();
+            }
+        }
+
+        // Global variables
+        let shipments = [];
+        let exchangeRate = 25300;
+        let currentMonth = 'all';
+        let searchTerm = '';
+        let editingShipmentId = null; // Track if we're editing
+
+        // Initialize
+        function init() {
+            // Check login first
+            checkAuth();
+            // Load data from localStorage
+            const stored = localStorage.getItem('shipments');
+            if (stored) {
+                try {
+                    shipments = JSON.parse(stored);
+                } catch (e) {
+                    shipments = [];
+                }
+            }
+
+            // Load data from localStorage
+            const saved = localStorage.getItem('shipments');
+            if (saved) {
+                shipments = JSON.parse(saved);
+                
+                // Recalculate profit for all existing shipments with new formula
+                // Old formula wrongly subtracted xray, awb, ams separately
+                // New formula: profit = selling - purchase - make (purchase already includes all costs)
+                let needsUpdate = false;
+                shipments = shipments.map(s => {
+                    const newProfit = calculateProfit(s);
+                    if (Math.abs(newProfit - s.profit) > 0.01) {
+                        needsUpdate = true;
+                        return { ...s, profit: newProfit };
+                    }
+                    return s;
+                });
+                
+                if (needsUpdate) {
+                    localStorage.setItem('shipments', JSON.stringify(shipments));
+                    console.log('Updated profit calculations for existing shipments');
+                }
+            }
+            
+            // Set default date
+            document.getElementById('readyDate').valueAsDate = new Date();
+            
+            // Set default X-ray value
+            document.getElementById('xray').value = 0.017;
+            
+            // Set default commission rate and tax
+            document.getElementById('commissionRate').value = exchangeRate;
+            document.getElementById('commissionTax').value = 20;
+
+            // Add form submit event listener
+            document.getElementById('shipmentForm').addEventListener('submit', handleSubmit);
+
+            // Initial calculation
+            calculateCommission();
+            calculateTotalPrices();
+
+            // Fetch exchange rate
+            fetchExchangeRate();
+
+            // Update UI
+            updateDashboard();
+            renderShipments();
+            populateMonthDropdown();
+        }
+
+        // Format currency
+        function formatCurrency(amount, currency = 'USD') {
+            if (currency === 'VND') {
+                return new Intl.NumberFormat('vi-VN').format(Math.round(amount)) + '₫';
+            }
+            return '$' + new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification show ' + type;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Calculate commission
+        function calculateCommission() {
+            const cw = parseFloat(document.getElementById('cw').value) || 0;
+            const cent = parseFloat(document.getElementById('commissionCent').value) || 0;
+            const tax = parseFloat(document.getElementById('commissionTax').value) || 0;
+            const rate = parseFloat(document.getElementById('commissionRate').value) || exchangeRate;
+
+            const commissionVND = cent * cw * (100 - tax) / 100 * rate;
+            const commissionUSD = commissionVND / rate;
+
+            document.getElementById('calculatedCommission').textContent = formatCurrency(commissionVND, 'VND');
+            document.getElementById('commissionUSD').textContent = '≈ ' + formatCurrency(commissionUSD);
+
+            return commissionVND;
+        }
+
+        // Calculate total prices based on unit prices and CW
+        function calculateTotalPrices() {
+            const cw = parseFloat(document.getElementById('cw').value) || 0;
+            const gw = parseFloat(document.getElementById('gw').value) || 0;
+            const sellingUnitPrice = parseFloat(document.getElementById('sellingUnitPrice').value) || 0;
+            
+            // Get Purchase rate and additional costs
+            const purchaseUnitPrice = parseFloat(document.getElementById('purchaseUnitPrice').value) || 0;
+            const xrayUnitPrice = parseFloat(document.getElementById('xray').value) || 0;
+            const awb = parseFloat(document.getElementById('awb').value) || 0;
+            const ams = parseFloat(document.getElementById('ams').value) || 0;
+            
+            // Calculate Purchase Total:
+            // Purchase = (Purchase rate × CW) + (X-ray rate × GW) + AWB + AMS
+            const purchaseFromRate = purchaseUnitPrice * cw;
+            const xrayTotal = xrayUnitPrice * gw;
+            const purchaseTotal = purchaseFromRate + xrayTotal + awb + ams;
+            
+            console.log('Purchase Calculation:', {
+                cw,
+                gw,
+                purchaseUnitPrice,
+                purchaseFromRate,
+                xrayUnitPrice,
+                xrayTotal,
+                awb,
+                ams,
+                purchaseTotal,
+                formula: `(${purchaseUnitPrice} × ${cw}) + (${xrayUnitPrice} × ${gw}) + ${awb} + ${ams} = ${purchaseTotal}`
+            });
+            
+            // Calculate selling total: Selling*CW + xray*GW + AWB + AMS
+            const sellingTotal = (sellingUnitPrice * cw) + (xrayUnitPrice * gw) + awb + ams;
+            const profit = sellingTotal - purchaseTotal;
+            
+            // Calculate Make (for reference) - simply Selling - Purchase per kg
+            const makeUnitPrice = sellingUnitPrice - purchaseUnitPrice;
+            const makeTotal = sellingTotal - purchaseTotal;
+            
+            // Update Make Unit Price field
+            document.getElementById('makeUnitPrice').value = makeUnitPrice.toFixed(1);
+
+            // Update Purchase Total display
+            const purchaseTotalElement = document.getElementById('purchaseTotalDisplay');
+            if (purchaseTotalElement) {
+                purchaseTotalElement.textContent = formatCurrency(purchaseTotal);
+            }
+
+            // Update totals display
+            document.getElementById('sellingTotal').textContent = formatCurrency(sellingTotal);
+            document.getElementById('purchaseTotal').textContent = formatCurrency(purchaseTotal);
+            document.getElementById('makeTotal').textContent = formatCurrency(makeTotal);
+            document.getElementById('estimatedProfit').textContent = formatCurrency(profit);
+            document.getElementById('estimatedProfit').style.color = profit >= 0 ? '#10b981' : '#ef4444';
+        }
+
+        // Calculate profit
+        // Profit = Selling - Purchase (Make is just reference, not used in calculation)
+        function calculateProfit(shipment) {
+            const selling = parseFloat(shipment.sellingPrice) || 0;
+            const purchase = parseFloat(shipment.purchasePrice) || 0;
+            
+            const profit = selling - purchase;
+            
+            console.log('Calculate Profit:', {
+                selling,
+                purchase,
+                profit,
+                makePrice: shipment.makePrice,
+                note: 'Make is reference only (Selling - Purchase). Not used in profit calculation.'
+            });
+            
+            return profit;
+        }
+
+        // Handle add shipment button click
+        function addShipment() {
+            const form = document.getElementById('shipmentForm');
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+
+        // Handle form submit
+        function handleSubmit(event) {
+            event.preventDefault();
+
+            const commissionVND = calculateCommission();
+            const commissionRate = parseFloat(document.getElementById('commissionRate').value) || exchangeRate;
+            
+            const cw = parseFloat(document.getElementById('cw').value) || 0;
+            const gw = parseFloat(document.getElementById('gw').value) || 0;
+            const sellingUnitPrice = parseFloat(document.getElementById('sellingUnitPrice').value) || 0;
+            
+            // Get Purchase rate and costs
+            const purchaseUnitPrice = parseFloat(document.getElementById('purchaseUnitPrice').value) || 0;
+            const xrayUnitPrice = parseFloat(document.getElementById('xray').value) || 0;
+            const awb = parseFloat(document.getElementById('awb').value) || 0;
+            const ams = parseFloat(document.getElementById('ams').value) || 0;
+            
+            // Calculate Purchase Total: (Purchase rate × CW) + (X-ray rate × GW) + AWB + AMS
+            const purchaseFromRate = purchaseUnitPrice * cw;
+            const xrayTotal = xrayUnitPrice * gw;  // X-ray is charged by GW
+            const purchaseTotal = purchaseFromRate + xrayTotal + awb + ams;
+            const purchaseTotalPerKg = cw > 0 ? purchaseTotal / cw : 0;
+            
+            // Calculate totals
+            const sellingPrice = (sellingUnitPrice * cw) + (xrayUnitPrice * gw) + awb + ams;
+            const makeUnitPrice = sellingUnitPrice - purchaseUnitPrice;
+            const makePrice = sellingPrice - purchaseTotal;
+
+            const shipmentData = {
+                company: document.getElementById('company').value,
+                customerName: document.getElementById('customerName').value,
+                readyDate: document.getElementById('readyDate').value,
+                carrier: document.getElementById('carrier').value,
+                dest: document.getElementById('dest').value,
+                mawb: document.getElementById('mawb').value,
+                purchaseUnitPrice: purchaseUnitPrice,
+                sellingUnitPrice: sellingUnitPrice,
+                purchaseTotalPerKg: purchaseTotalPerKg,
+                makeUnitPrice: makeUnitPrice,
+                sellingPrice: sellingPrice,
+                purchasePrice: purchaseTotal,
+                makePrice: makePrice,
+                gw: gw,
+                cw: cw,
+                xray: xrayUnitPrice,
+                awb: awb,
+                ams: ams,
+                paymentStatus: document.getElementById('paymentStatus').value,
+                customerNote: document.getElementById('customerNote').value,
+                commissionCent: parseFloat(document.getElementById('commissionCent').value) || 0,
+                commissionTax: parseFloat(document.getElementById('commissionTax').value) || 0,
+                commissionRate: commissionRate,
+                commissionVND: commissionVND,
+                commissionUSD: commissionVND / commissionRate
+            };
+
+            if (editingShipmentId) {
+                // UPDATE MODE
+                const index = shipments.findIndex(s => s.id === editingShipmentId);
+                if (index !== -1) {
+                    shipmentData.id = editingShipmentId;
+                    shipmentData.createdAt = shipments[index].createdAt;
+                    shipmentData.updatedAt = new Date().toISOString();
+                    shipmentData.profit = calculateProfit(shipmentData);
+                    
+                    shipments[index] = shipmentData;
+                    localStorage.setItem('shipments', JSON.stringify(shipments));
+
+                    showNotification(`✅ Đã cập nhật: ${shipmentData.company} - Lợi nhuận: ${formatCurrency(shipmentData.profit)}`);
+                }
+
+                // Exit edit mode
+                cancelEdit();
+            } else {
+                // ADD MODE
+                shipmentData.id = Date.now();
+                shipmentData.createdAt = new Date().toISOString();
+                shipmentData.profit = calculateProfit(shipmentData);
+
+                console.log('Shipment before calculating profit:', shipmentData);
+                console.log('Shipment after calculating profit:', shipmentData.profit);
+
+                shipments.unshift(shipmentData);
+                localStorage.setItem('shipments', JSON.stringify(shipments));
+
+                showNotification(`✅ Đã thêm: ${shipmentData.company} - Lợi nhuận: ${formatCurrency(shipmentData.profit)}`);
+
+                document.getElementById('shipmentForm').reset();
+                document.getElementById('readyDate').valueAsDate = new Date();
+                document.getElementById('commissionRate').value = exchangeRate;
+                document.getElementById('commissionTax').value = 20;
+                document.getElementById('xray').value = 0.017;
+                calculateCommission();
+                calculateTotalPrices();
+            }
+
+            updateDashboard();
+            renderShipments();
+            populateMonthDropdown();
+        }
+
+        // Get filtered shipments
+        function getFilteredShipments() {
+            return shipments.filter(s => {
+                let monthMatch = true;
+                if (currentMonth !== 'all') {
+                    const date = new Date(s.readyDate);
+                    const monthYear = `${date.getMonth()}-${date.getFullYear()}`;
+                    monthMatch = monthYear === currentMonth;
+                }
+
+                let searchMatch = true;
+                if (searchTerm) {
+                    const search = searchTerm.toLowerCase();
+                    searchMatch = 
+                        (s.company || '').toLowerCase().includes(search) ||
+                        (s.mawb || '').toLowerCase().includes(search) ||
+                        (s.dest || '').toLowerCase().includes(search) ||
+                        (s.carrier || '').toLowerCase().includes(search) ||
+                        (s.customerName || '').toLowerCase().includes(search);
+                }
+
+                return monthMatch && searchMatch;
+            });
+        }
+
+        // Update dashboard
+        function updateDashboard() {
+            const filteredShipments = getFilteredShipments();
+            
+            // REVENUE = Total Selling Price (what we charge customers)
+            const totalRevenue = filteredShipments.reduce((sum, s) => sum + s.sellingPrice, 0);
+            
+            // PROFIT = Selling - Purchase - Make
+            // Note: Purchase Price already includes AF/FSC/SSC, X-ray, AWB, AMS, CCA
+            const totalProfit = filteredShipments.reduce((sum, s) => sum + s.profit, 0);
+            const totalShipments = filteredShipments.length;
+            const pendingShipments = filteredShipments.filter(s => s.paymentStatus === 'pending');
+            const pendingAmount = pendingShipments.reduce((sum, s) => sum + s.sellingPrice, 0);
+            const avgProfit = totalShipments > 0 ? totalProfit / totalShipments : 0;
+            const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
+
+            document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
+            document.getElementById('totalRevenueVND').textContent = formatCurrency(totalRevenue * exchangeRate, 'VND');
+            
+            document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
+            document.getElementById('totalProfitVND').textContent = formatCurrency(totalProfit * exchangeRate, 'VND');
+            
+            document.getElementById('totalShipments').textContent = totalShipments;
+            document.getElementById('avgProfit').textContent = 'TB: ' + formatCurrency(avgProfit) + '/lô';
+            
+            document.getElementById('pendingPayments').textContent = pendingShipments.length;
+            document.getElementById('pendingAmount').textContent = formatCurrency(pendingAmount);
+            
+            document.getElementById('profitMargin').textContent = profitMargin.toFixed(1) + '%';
+
+            // Update summary
+            const summaryTitle = document.getElementById('summaryTitle');
+            if (currentMonth === 'all') {
+                summaryTitle.textContent = '📊 Tổng Kết Tất Cả';
+            } else {
+                const [month, year] = currentMonth.split('-').map(Number);
+                const months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                               'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+                summaryTitle.textContent = `📊 Tổng Kết ${months[month]} ${year}`;
+            }
+            
+            document.getElementById('monthRevenue').textContent = formatCurrency(totalRevenue);
+            document.getElementById('monthProfit').textContent = formatCurrency(totalProfit);
+            document.getElementById('monthShipments').textContent = totalShipments;
+            document.getElementById('monthMargin').textContent = profitMargin.toFixed(1) + '%';
+        }
+
+        // Render shipments
+        function renderShipments() {
+            const tbody = document.getElementById('shipmentList');
+            const filteredShipments = getFilteredShipments();
+
+            if (filteredShipments.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="12">
+                            <div class="empty-state">
+                                <h3>${searchTerm ? 'Không tìm thấy' : 'Chưa có lô hàng nào'}</h3>
+                                <p>${searchTerm ? 'Thử từ khóa khác' : 'Thêm lô hàng đầu tiên'}</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredShipments.map(s => {
+                const commissionDisplay = s.commissionVND 
+                    ? `<div style="font-weight: 700; color: #10b981;">${formatCurrency(s.commissionVND, 'VND')}</div>
+                       <div style="font-size: 10px; color: #94a3b8;">${s.commissionCent}¢ × ${s.cw}kg</div>`
+                    : '-';
+
+                return `
+                    <tr>
+                        <td style="white-space: nowrap;">${new Date(s.readyDate).toLocaleDateString('vi-VN')}</td>
+                        <td>
+                            <strong>${s.company}</strong>
+                            ${s.customerName ? `<div style="font-size: 11px; color: #64748b;">${s.customerName}</div>` : ''}
+                        </td>
+                        <td>${s.mawb || '-'}</td>
+                        <td>${s.dest || '-'}</td>
+                        <td><strong>${s.cw || 0}</strong></td>
+                        <td>
+                            ${formatCurrency(s.purchasePrice)}
+                            ${s.purchaseUnitPrice ? `<div style="font-size: 10px; color: #94a3b8;">${formatCurrency(s.purchaseUnitPrice)}/kg</div>` : ''}
+                        </td>
+                        <td>
+                            ${formatCurrency(s.makePrice || 0)}
+                            ${s.makeUnitPrice ? `<div style="font-size: 10px; color: #94a3b8;">${formatCurrency(s.makeUnitPrice)}/kg</div>` : ''}
+                        </td>
+                        <td style="font-weight: 700; color: #3b82f6;">
+                            ${formatCurrency(s.sellingPrice)}
+                            ${s.sellingUnitPrice ? `<div style="font-size: 10px; color: #94a3b8;">${formatCurrency(s.sellingUnitPrice)}/kg</div>` : ''}
+                        </td>
+                        <td class="${s.profit >= 0 ? 'profit-positive' : 'profit-negative'}">
+                            ${formatCurrency(s.profit)}
+                        </td>
+                        <td>${commissionDisplay}</td>
+                        <td>
+                            <span class="status-badge status-${s.paymentStatus}">
+                                ${s.paymentStatus === 'paid' ? 'Đã TT' : 'Chưa TT'}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="btn btn-primary btn-sm" onclick="editShipment(${s.id})" title="Sửa">
+                                    ✏️
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteShipment(${s.id})" title="Xóa">
+                                    🗑️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Delete shipment
+        function deleteShipment(id) {
+            if (confirm('Bạn có chắc muốn xóa lô hàng này?')) {
+                shipments = shipments.filter(s => s.id !== id);
+                localStorage.setItem('shipments', JSON.stringify(shipments));
+                
+                showNotification('🗑️ Đã xóa thành công!');
+                
+                updateDashboard();
+                renderShipments();
+                populateMonthDropdown();
+            }
+        }
+
+        // Edit shipment
+        function editShipment(id) {
+            const shipment = shipments.find(s => s.id === id);
+            if (!shipment) return;
+
+            // Set editing mode
+            editingShipmentId = id;
+
+            // Scroll to form
+            document.getElementById('shipmentForm').scrollIntoView({ behavior: 'smooth' });
+
+            // Fill form with shipment data
+            document.getElementById('company').value = shipment.company || '';
+            document.getElementById('customerName').value = shipment.customerName || '';
+            document.getElementById('readyDate').value = shipment.readyDate || '';
+            document.getElementById('carrier').value = shipment.carrier || '';
+            document.getElementById('dest').value = shipment.dest || '';
+            document.getElementById('mawb').value = shipment.mawb || '';
+            document.getElementById('gw').value = shipment.gw || 0;
+            document.getElementById('cw').value = shipment.cw || 0;
+            
+            document.getElementById('purchaseUnitPrice').value = shipment.purchaseUnitPrice || 0;
+            document.getElementById('sellingUnitPrice').value = shipment.sellingUnitPrice || 0;
+            
+            document.getElementById('xray').value = shipment.xray || 0.017;
+            document.getElementById('awb').value = shipment.awb || 0;
+            document.getElementById('ams').value = shipment.ams || 0;
+            document.getElementById('paymentStatus').value = shipment.paymentStatus || 'pending';
+            document.getElementById('customerNote').value = shipment.customerNote || '';
+            
+            document.getElementById('commissionCent').value = shipment.commissionCent || 0;
+            document.getElementById('commissionTax').value = shipment.commissionTax || 20;
+            document.getElementById('commissionRate').value = shipment.commissionRate || exchangeRate;
+
+            // Update button text
+            const submitBtn = document.querySelector('#shipmentForm button[type="submit"]');
+            submitBtn.innerHTML = '💾 Cập nhật Lô Hàng';
+            submitBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+
+            // Add cancel button if not exists
+            let cancelBtn = document.getElementById('cancelEditBtn');
+            if (!cancelBtn) {
+                cancelBtn = document.createElement('button');
+                cancelBtn.id = 'cancelEditBtn';
+                cancelBtn.type = 'button';
+                cancelBtn.className = 'btn btn-danger';
+                cancelBtn.style.width = '100%';
+                cancelBtn.style.marginTop = '10px';
+                cancelBtn.innerHTML = '❌ Hủy Chỉnh Sửa';
+                cancelBtn.onclick = cancelEdit;
+                submitBtn.parentNode.appendChild(cancelBtn);
+            }
+
+            // Recalculate totals
+            calculateCommission();
+            calculateTotalPrices();
+
+            showNotification('✏️ Chế độ chỉnh sửa - Cập nhật thông tin và nhấn Cập nhật', 'info');
+        }
+
+        // Cancel edit mode
+        function cancelEdit() {
+            editingShipmentId = null;
+            
+            // Reset form
+            document.getElementById('shipmentForm').reset();
+            document.getElementById('readyDate').valueAsDate = new Date();
+            document.getElementById('commissionRate').value = exchangeRate;
+            document.getElementById('commissionTax').value = 20;
+            document.getElementById('xray').value = 0.017;
+            calculateCommission();
+            calculateTotalPrices();
+
+            // Reset button
+            const submitBtn = document.querySelector('#shipmentForm button[type="submit"]');
+            submitBtn.innerHTML = '➕ Thêm Lô Hàng';
+            submitBtn.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+
+            // Remove cancel button
+            const cancelBtn = document.getElementById('cancelEditBtn');
+            if (cancelBtn) cancelBtn.remove();
+
+            showNotification('✅ Đã hủy chỉnh sửa');
+        }
+
+        // Populate month dropdown
+        function populateMonthDropdown() {
+            const monthSelect = document.getElementById('monthSelect');
+            
+            const monthsSet = new Set();
+            shipments.forEach(s => {
+                const date = new Date(s.readyDate);
+                const monthYear = `${date.getMonth()}-${date.getFullYear()}`;
+                monthsSet.add(monthYear);
+            });
+
+            const sortedMonths = Array.from(monthsSet).sort((a, b) => {
+                const [monthA, yearA] = a.split('-').map(Number);
+                const [monthB, yearB] = b.split('-').map(Number);
+                if (yearA !== yearB) return yearB - yearA;
+                return monthB - monthA;
+            });
+
+            const months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                           'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+            
+            const options = ['<option value="all">Tất cả các tháng</option>'];
+            
+            sortedMonths.forEach(monthYear => {
+                const [month, year] = monthYear.split('-').map(Number);
+                const shipmentsInMonth = shipments.filter(s => {
+                    const date = new Date(s.readyDate);
+                    return date.getMonth() === month && date.getFullYear() === year;
+                });
+                
+                options.push(`
+                    <option value="${monthYear}">
+                        ${months[month]} ${year} (${shipmentsInMonth.length} lô)
+                    </option>
+                `);
+            });
+
+            monthSelect.innerHTML = options.join('');
+            monthSelect.value = currentMonth;
+        }
+
+        // Filter by month
+        function filterByMonth(monthYear) {
+            currentMonth = monthYear;
+            updateDashboard();
+            renderShipments();
+        }
+
+        // Search shipments
+        function searchShipments() {
+            searchTerm = document.getElementById('searchInput').value;
+            renderShipments();
+        }
+
+        // Export to Excel
+        function exportToExcel() {
+            if (shipments.length === 0) {
+                showNotification('Không có dữ liệu để xuất!', 'error');
+                return;
+            }
+
+            let csv = 'Company,Customer Name,Ready Date,Carrier,Destination,MAWB,CW,GW,Purchase Unit Price,Selling Unit Price,Selling Total,Purchase Total,Make Unit Price,Make Total,X-Ray,AWB,AMS,Profit,Commission (VND),Com Cent,Com Tax %,Com Rate,Payment Status,Customer Note\n';
+            
+            shipments.forEach(s => {
+                const row = [
+                    s.company,
+                    s.customerName || '',
+                    s.readyDate,
+                    s.carrier || '',
+                    s.dest || '',
+                    s.mawb || '',
+                    s.cw || 0,
+                    s.gw || 0,
+                    s.purchaseUnitPrice || 0,
+                    s.sellingUnitPrice || 0,
+                    s.sellingPrice || 0,
+                    s.purchasePrice || 0,
+                    s.makeUnitPrice || 0,
+                    s.makePrice || 0,
+                    s.xray || 0,
+                    s.awb || 0,
+                    s.ams || 0,
+                    (s.profit || 0).toFixed(2),
+                    Math.round(s.commissionVND || 0),
+                    s.commissionCent || 0,
+                    s.commissionTax || 0,
+                    s.commissionRate || 0,
+                    s.paymentStatus,
+                    (s.customerNote || '').replace(/,/g, ';')
+                ].join(',');
+                csv += row + '\n';
+            });
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `logistics-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showNotification('📥 Đã xuất dữ liệu thành công!');
+        }
+
+        // Clear all data
+        function clearAllData() {
+            if (confirm('⚠️ XÓA TẤT CẢ DỮ LIỆU?\n\nHành động này không thể hoàn tác!')) {
+                if (confirm('Xác nhận lần cuối?')) {
+                    shipments = [];
+                    localStorage.removeItem('shipments');
+                    
+                    updateDashboard();
+                    renderShipments();
+                    populateMonthDropdown();
+                    
+                    showNotification('✅ Đã xóa tất cả!');
+                }
+            }
+        }
+
+        // Recalculate all profit
+        function recalculateAllProfit() {
+            if (shipments.length === 0) {
+                showNotification('Không có dữ liệu để tính lại!', 'error');
+                return;
+            }
+            
+            if (confirm('🔄 Tính lại lợi nhuận cho TẤT CẢ lô hàng?\n\nCông thức mới: Profit = Selling - Purchase - Make\n(Purchase đã bao gồm: AF, X-ray, AWB, AMS, CCA)')) {
+                let updated = 0;
+                shipments = shipments.map(s => {
+                    const oldProfit = s.profit;
+                    const newProfit = calculateProfit(s);
+                    
+                    if (Math.abs(newProfit - oldProfit) > 0.01) {
+                        updated++;
+                    }
+                    
+                    return { ...s, profit: newProfit };
+                });
+                
+                localStorage.setItem('shipments', JSON.stringify(shipments));
+                
+                updateDashboard();
+                renderShipments();
+                
+                showNotification(`✅ Đã tính lại ${updated} lô hàng!`);
+            }
+        }
+
+        // Fetch exchange rate
+        async function fetchExchangeRate() {
+            try {
+                const response = await fetch('https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx?b=10');
+                const text = await response.text();
+                
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(text, 'text/xml');
+                const usdRate = xml.querySelector('Exrate[CurrencyCode="USD"] Sell');
+                
+                if (usdRate) {
+                    exchangeRate = parseFloat(usdRate.textContent.replace(/,/g, ''));
+                    const inputEl = document.getElementById('exchangeRateInput');
+                    if (inputEl) inputEl.value = exchangeRate;
+                    document.getElementById('exchangeUpdate').textContent = `VCB - Cập nhật: ${new Date().toLocaleTimeString('vi-VN')}`;
+                    
+                    const commissionRateField = document.getElementById('commissionRate');
+                    if (!commissionRateField.value || commissionRateField.value == 25300) {
+                        commissionRateField.value = exchangeRate;
+                        calculateCommission();
+                    }
+                    
+                    updateDashboard();
+                }
+            } catch (error) {
+                console.log('Using default rate:', exchangeRate);
+            }
+        }
+
+        // Initialize app
+        init();
+
+        // Refresh exchange rate every 30 minutes
+        setInterval(fetchExchangeRate, 30 * 60 * 1000);
+    </script>
+</body>
+</html>
