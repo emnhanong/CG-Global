@@ -1530,11 +1530,11 @@
         
         // Gửi dữ liệu lô hàng lên Google Sheets (sheet: data khách hàng)
         async function syncShipmentToSheets(shipmentData, action = 'ADD') {
-            if (!SHEETS_CONFIG.scriptUrl) return; // Chưa cấu hình
+            if (!SHEETS_CONFIG.scriptUrl) return;
             try {
                 const payload = {
                     action: 'syncShipment',
-                    operation: action, // 'ADD' | 'UPDATE' | 'DELETE'
+                    operation: action,
                     sheetId: SHEETS_CONFIG.sheetId,
                     data: {
                         id: shipmentData.id,
@@ -1567,20 +1567,22 @@
                         updatedBy: getCurrentUser() || 'Unknown',
                     }
                 };
-                await fetch(SHEETS_CONFIG.scriptUrl, {
+                // Dùng text/plain để tránh CORS preflight, Apps Script vẫn đọc được body
+                const response = await fetch(SHEETS_CONFIG.scriptUrl, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
+                console.log('✅ Sheets sync (shipment):', action, shipmentData.company);
             } catch (err) {
-                console.warn('Google Sheets sync failed (shipment):', err);
+                console.error('❌ Google Sheets sync failed (shipment):', err);
             }
         }
         
         // Ghi lịch sử thao tác lên Google Sheets (sheet: lịch sử thao tác)
         async function logAuditToSheets(actionType, description, affectedData, oldData = null) {
-            if (!SHEETS_CONFIG.scriptUrl) return; // Chưa cấu hình
+            if (!SHEETS_CONFIG.scriptUrl) return;
             try {
                 const dataList = Array.isArray(affectedData) ? affectedData : [affectedData];
                 const payload = {
@@ -1601,11 +1603,12 @@
                 await fetch(SHEETS_CONFIG.scriptUrl, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
+                console.log('✅ Sheets audit log:', actionType, description);
             } catch (err) {
-                console.warn('Google Sheets sync failed (audit):', err);
+                console.error('❌ Google Sheets sync failed (audit):', err);
             }
         }
         
@@ -1729,96 +1732,145 @@
         
         function getAppsScriptCode() {
             return `// ============================================
-// Google Apps Script cho Connect Global Logistics
-// Copy toàn bộ code này vào Apps Script Editor
+// Google Apps Script - Connect Global Logistics
+// Phiên bản: 2.0 - Hỗ trợ text/plain để tránh CORS
 // ============================================
 
 function doGet(e) {
+  // Hỗ trợ CORS preflight
   return ContentService.createTextOutput('OK').setMimeType(ContentService.MimeType.TEXT);
 }
 
 function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents);
+    // Đọc body - hỗ trợ cả application/json và text/plain
+    var raw = e.postData.contents;
+    if (!raw) throw new Error('Empty body');
+    var data = JSON.parse(raw);
+    
+    if (!data.sheetId) throw new Error('Missing sheetId');
     var ss = SpreadsheetApp.openById(data.sheetId);
     
     if (data.action === 'syncShipment') {
       var sheet = ss.getSheetByName('data khách hàng');
-      if (!sheet) sheet = ss.insertSheet('data khách hàng');
+      if (!sheet) {
+        sheet = ss.insertSheet('data khách hàng');
+      }
       handleShipment(sheet, data.operation, data.data);
+      
     } else if (data.action === 'logAudit') {
       var sheet = ss.getSheetByName('lịch sử thao tác');
-      if (!sheet) sheet = ss.insertSheet('lịch sử thao tác');
+      if (!sheet) {
+        sheet = ss.insertSheet('lịch sử thao tác');
+      }
       appendAudit(sheet, data.data);
     }
-    return ContentService.createTextOutput(JSON.stringify({status:'OK'}))
+    
+    var result = JSON.stringify({ status: 'OK', action: data.action });
+    return ContentService.createTextOutput(result)
       .setMimeType(ContentService.MimeType.JSON);
+      
   } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({status:'Error', message: err.message}))
+    var errMsg = JSON.stringify({ status: 'Error', message: err.message });
+    return ContentService.createTextOutput(errMsg)
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-var SHIPMENT_HEADERS = ['ID','Công ty','Tên khách hàng','Ngày ready','Hãng bay','Điểm đến','MAWB','CW (kg)','GW (kg)','Giá mua/kg (USD)','Giá bán/kg (USD)','Tổng mua (USD)','Tổng bán (USD)','Make (USD)','X-ray rate','AWB (USD)','AMS (USD)','Lợi nhuận (USD)','Hoa hồng (VND)','Commission Cent','Thuế com (%)','Tỷ giá','Trạng thái com','Thanh toán','Ghi chú','Tạo lúc','Cập nhật lúc','Cập nhật bởi'];
+// ========== SHEET: data khách hàng ==========
+var HEADERS_SHIPMENT = [
+  'ID', 'Công ty', 'Tên khách hàng', 'Ngày ready', 'Hãng bay', 'Điểm đến', 'MAWB',
+  'CW (kg)', 'GW (kg)', 'Giá mua/kg (USD)', 'Giá bán/kg (USD)',
+  'Tổng mua (USD)', 'Tổng bán (USD)', 'Make (USD)',
+  'X-ray rate', 'AWB (USD)', 'AMS (USD)', 'Lợi nhuận (USD)',
+  'Hoa hồng (VND)', 'Commission Cent', 'Thuế com (%)', 'Tỷ giá',
+  'Trạng thái com', 'Thanh toán', 'Ghi chú',
+  'Tạo lúc', 'Cập nhật lúc', 'Cập nhật bởi'
+];
 
 function ensureShipmentHeaders(sheet) {
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(SHIPMENT_HEADERS);
-    sheet.getRange(1, 1, 1, SHIPMENT_HEADERS.length).setFontWeight('bold').setBackground('#1a1200').setFontColor('#d4af37');
+    sheet.appendRow(HEADERS_SHIPMENT);
+    var hdr = sheet.getRange(1, 1, 1, HEADERS_SHIPMENT.length);
+    hdr.setFontWeight('bold').setBackground('#1a1200').setFontColor('#d4af37');
     sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, HEADERS_SHIPMENT.length, 120);
   }
 }
 
-function shipmentToRow(d) {
-  return [d.id, d.company, d.customerName, d.readyDate, d.carrier, d.dest, d.mawb,
-    d.cw, d.gw, d.purchaseUnitPrice, d.sellingUnitPrice, d.purchasePrice, d.sellingPrice,
-    d.makePrice, d.xray, d.awb, d.ams, d.profit, d.commissionVND, d.commissionCent,
-    d.commissionTax, d.commissionRate, d.comPaymentStatus, d.paymentStatus,
-    d.customerNote, d.createdAt, d.updatedAt, d.updatedBy];
+function toRow(d) {
+  return [
+    String(d.id), d.company, d.customerName, d.readyDate, d.carrier, d.dest, d.mawb,
+    d.cw, d.gw, d.purchaseUnitPrice, d.sellingUnitPrice,
+    d.purchasePrice, d.sellingPrice, d.makePrice,
+    d.xray, d.awb, d.ams, d.profit,
+    d.commissionVND, d.commissionCent, d.commissionTax, d.commissionRate,
+    d.comPaymentStatus, d.paymentStatus, d.customerNote,
+    d.createdAt, d.updatedAt, d.updatedBy
+  ];
+}
+
+function findRowById(sheet, id) {
+  var vals = sheet.getDataRange().getValues();
+  for (var i = 1; i < vals.length; i++) {
+    if (String(vals[i][0]) === String(id)) return i + 1; // 1-based row number
+  }
+  return -1;
 }
 
 function handleShipment(sheet, op, d) {
   ensureShipmentHeaders(sheet);
+  var row = toRow(d);
   
   if (op === 'ADD') {
-    sheet.appendRow(shipmentToRow(d));
+    sheet.appendRow(row);
+    
   } else if (op === 'UPDATE') {
-    var rows = sheet.getDataRange().getValues();
-    for (var i = 1; i < rows.length; i++) {
-      if (String(rows[i][0]) === String(d.id)) {
-        sheet.getRange(i + 1, 1, 1, 28).setValues([shipmentToRow(d)]);
-        return;
-      }
+    var rowNum = findRowById(sheet, d.id);
+    if (rowNum > 0) {
+      sheet.getRange(rowNum, 1, 1, row.length).setValues([row]);
+    } else {
+      sheet.appendRow(row); // Nếu không tìm thấy, thêm mới
     }
-    // Không tìm thấy → thêm mới
-    sheet.appendRow(shipmentToRow(d));
+    
   } else if (op === 'DELETE') {
-    var rows = sheet.getDataRange().getValues();
-    for (var i = rows.length - 1; i >= 1; i--) {
-      if (String(rows[i][0]) === String(d.id)) {
-        sheet.deleteRow(i + 1);
-        return;
-      }
+    var rowNum = findRowById(sheet, d.id);
+    if (rowNum > 0) {
+      sheet.deleteRow(rowNum);
     }
   }
 }
 
-var AUDIT_HEADERS = ['Thời gian','Người dùng','Loại thao tác','Mô tả','Số lô ảnh hưởng','ID lô','Tên công ty','Dữ liệu cũ (JSON)','Dữ liệu mới (JSON)'];
+// ========== SHEET: lịch sử thao tác ==========
+var HEADERS_AUDIT = [
+  'Thời gian', 'Người dùng', 'Loại thao tác', 'Mô tả',
+  'Số lô ảnh hưởng', 'ID lô', 'Tên công ty',
+  'Dữ liệu cũ (JSON)', 'Dữ liệu mới (JSON)'
+];
 
 function ensureAuditHeaders(sheet) {
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(AUDIT_HEADERS);
-    sheet.getRange(1, 1, 1, AUDIT_HEADERS.length).setFontWeight('bold').setBackground('#0f3460').setFontColor('white');
+    sheet.appendRow(HEADERS_AUDIT);
+    var hdr = sheet.getRange(1, 1, 1, HEADERS_AUDIT.length);
+    hdr.setFontWeight('bold').setBackground('#0f3460').setFontColor('white');
     sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, HEADERS_AUDIT.length, 150);
   }
 }
 
 function appendAudit(sheet, d) {
   ensureAuditHeaders(sheet);
-  // Format timestamp đọc được
-  var ts = d.timestamp ? new Date(d.timestamp).toLocaleString('vi-VN') : '';
-  sheet.appendRow([ts, d.user, d.actionType, d.description, d.recordCount,
-    d.affectedIds, d.affectedCompanies, d.oldData, d.newData]);
+  var ts = '';
+  try {
+    ts = d.timestamp ? new Date(d.timestamp).toLocaleString('vi-VN', {timeZone: 'Asia/Ho_Chi_Minh'}) : '';
+  } catch(e) {
+    ts = d.timestamp || '';
+  }
+  sheet.appendRow([
+    ts, d.user, d.actionType, d.description,
+    d.recordCount, d.affectedIds, d.affectedCompanies,
+    d.oldData, d.newData
+  ]);
 }`;
         }
         
