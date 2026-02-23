@@ -1580,11 +1580,68 @@
             }
         }
         
+        // Chuyển 1 object shipment thành text dễ đọc cho Google Sheets
+        function formatShipmentForSheet(s) {
+            if (!s || typeof s !== 'object') return '';
+            // Nếu vô tình truyền mảng thì lấy phần tử đầu
+            if (Array.isArray(s)) s = s[0];
+            if (!s) return '';
+
+            const fmt2 = v => isNaN(v) ? (v || 0) : Number(v || 0).toFixed(2);
+            const fmtVND = v => v ? Number(v).toLocaleString('vi-VN') + ' ₫' : '-';
+
+            // comPaymentStatus có thể là 'com_paid'/'com_pending' hoặc đã convert 'Đã trả com'/'Chưa trả com'
+            const comStatus = (s.comPaymentStatus || '') === 'com_paid' || (s.comPaymentStatus || '') === 'Đã trả com'
+                ? 'Đã trả com' : 'Chưa trả com';
+            // paymentStatus có thể là 'paid'/'pending' hoặc đã convert
+            const payStatus = (s.paymentStatus || '') === 'paid' || (s.paymentStatus || '') === 'Đã thanh toán'
+                ? 'Đã thanh toán' : 'Chưa thanh toán';
+
+            const lines = [
+                `Công ty     : ${s.company || '-'}`,
+                `Khách hàng  : ${s.customerName || '-'}`,
+                `Ngày ready  : ${s.readyDate || '-'}`,
+                `Hãng bay    : ${s.carrier || '-'}   Đến: ${s.dest || '-'}`,
+                `MAWB        : ${s.mawb || '-'}`,
+                `CW          : ${s.cw || 0} kg   GW: ${s.gw || 0} kg`,
+                `Giá mua/kg  : $${fmt2(s.purchaseUnitPrice)}   Giá bán/kg: $${fmt2(s.sellingUnitPrice)}`,
+                `Tổng mua    : $${fmt2(s.purchasePrice)}`,
+                `Tổng bán    : $${fmt2(s.sellingPrice)}`,
+                `Lợi nhuận   : $${fmt2(s.profit)}`,
+                `Thanh toán  : ${payStatus}`,
+                `Hoa hồng    : ${fmtVND(s.commissionVND)}`,
+                `Trạng thái com: ${comStatus}`,
+                s.customerNote ? `Ghi chú     : ${s.customerNote}` : null,
+            ].filter(Boolean);
+
+            return lines.join('\n');
+        }
+
         // Ghi lịch sử thao tác lên Google Sheets (sheet: lịch sử thao tác)
         async function logAuditToSheets(actionType, description, affectedData, oldData = null) {
             if (!SHEETS_CONFIG.scriptUrl) return;
             try {
                 const dataList = Array.isArray(affectedData) ? affectedData : [affectedData];
+
+                // Format dữ liệu mới — nếu nhiều lô thì hiện từng lô phân cách
+                const newDataText = dataList.map((s, i) => {
+                    const header = dataList.length > 1 ? `── Lô ${i + 1}/${dataList.length} ──\n` : '';
+                    return header + formatShipmentForSheet(s);
+                }).join('\n\n');
+
+                // Format dữ liệu cũ — oldData có thể là object đơn hoặc mảng
+                let oldDataText = '';
+                if (oldData) {
+                    if (Array.isArray(oldData)) {
+                        oldDataText = oldData.map((s, i) => {
+                            const header = oldData.length > 1 ? `── Lô ${i + 1}/${oldData.length} ──\n` : '';
+                            return header + formatShipmentForSheet(s);
+                        }).join('\n\n');
+                    } else {
+                        oldDataText = formatShipmentForSheet(oldData);
+                    }
+                }
+
                 const payload = {
                     action: 'logAudit',
                     sheetId: SHEETS_CONFIG.sheetId,
@@ -1596,8 +1653,8 @@
                         recordCount: dataList.length,
                         affectedIds: dataList.map(s => s.id).join(', '),
                         affectedCompanies: dataList.map(s => s.company || '').join(', '),
-                        oldData: oldData ? JSON.stringify(oldData).substring(0, 500) : '',
-                        newData: JSON.stringify(dataList).substring(0, 500)
+                        oldData: oldDataText,
+                        newData: newDataText
                     }
                 };
                 await fetch(SHEETS_CONFIG.scriptUrl, {
@@ -1889,11 +1946,21 @@ function appendAudit(sheet, d) {
     ts = new Date(d.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
   } catch(e) { ts = d.timestamp || ''; }
   
+  var newRow = sheet.getLastRow() + 1;
   sheet.appendRow([
     ts, d.user, d.actionType, d.description,
     d.recordCount, d.affectedIds, d.affectedCompanies,
     d.oldData, d.newData
   ]);
+  
+  // Wrap text cho cột Dữ liệu cũ (H) và Dữ liệu mới (I)
+  sheet.getRange(newRow, 8, 1, 2).setWrap(true).setVerticalAlignment('top');
+  // Set chiều cao hàng tự động
+  sheet.setRowHeight(newRow, 21 * (Math.max(
+    (d.oldData || '').split('\n').length,
+    (d.newData || '').split('\n').length,
+    1
+  ) + 1));
 }`;
         }
         
