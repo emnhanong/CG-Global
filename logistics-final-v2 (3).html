@@ -1251,34 +1251,33 @@
                         </div>
                     </div>
 
-                    <!-- Commission Calculator -->
+                    <!-- Multi-Commission Calculator -->
                     <div class="commission-box">
-                        <label class="form-label" style="color: #1e3a8a; margin-bottom: 15px; display: block;">💰 Commission Calculator</label>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" style="font-size: 12px;">Ăn chênh (cent)</label>
-                                <input type="number" class="form-input" id="commissionCent" placeholder="0.05" step="0.01" oninput="calculateCommission()">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" style="font-size: 12px;">Thuế DN (%)</label>
-                                <input type="number" class="form-input" id="commissionTax" placeholder="20" step="1" value="20" oninput="calculateCommission()">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" style="font-size: 12px;">Tỷ giá (VNĐ)</label>
-                                <input type="number" class="form-input" id="commissionRate" placeholder="25000" step="1" min="1" oninput="calculateCommission()">
-                            </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                            <label class="form-label" style="color: #1e3a8a; margin-bottom:0;">💰 Commission Calculator</label>
+                            <button type="button" onclick="addCommissionRow()" 
+                                style="padding:7px 14px;border:none;border-radius:8px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">
+                                ➕ Thêm người nhận
+                            </button>
                         </div>
-                        <div class="commission-result">
-                            <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
-                                Công thức: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">Cent × CW × (100 - Thuế)% × Tỷ giá</code>
+                        <div style="font-size:11px;color:#64748b;margin-bottom:12px;background:#f1f5f9;padding:8px 12px;border-radius:8px;">
+                            Công thức: <code style="background:white;padding:2px 6px;border-radius:4px;font-weight:600;">Cent × CW × (100 - Thuế)% × Tỷ giá</code>
+                        </div>
+                        <!-- Commission rows container -->
+                        <div id="commissionRowsContainer"></div>
+                        <!-- Tổng commission -->
+                        <div style="background:white;border:2px solid #d4af37;border-radius:10px;padding:12px 15px;margin-top:12px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-weight:700;color:#64748b;font-size:13px;">Tổng Commission:</span>
+                                <span id="calculatedCommission" style="font-size:20px;font-weight:800;color:#10b981;">0₫</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 600; color: #64748b;">Commission:</span>
-                                <span id="calculatedCommission" style="font-size: 20px; font-weight: 800; color: #10b981;">0 VNĐ</span>
-                            </div>
-                            <div style="font-size: 11px; color: #94a3b8; margin-top: 5px;" id="commissionUSD">≈ $0.00</div>
+                            <div style="font-size:11px;color:#94a3b8;margin-top:4px;" id="commissionUSD">≈ $0.00</div>
                         </div>
                     </div>
+                    <!-- Hidden legacy fields for backward compat -->
+                    <input type="hidden" id="commissionCent" value="0">
+                    <input type="hidden" id="commissionTax" value="20">
+                    <input type="hidden" id="commissionRate" value="25300">
 
                     <button type="submit" class="btn btn-primary" style="width: 100%;">
                         ➕ Thêm Lô Hàng
@@ -2694,6 +2693,8 @@ function appendAudit(sheet, d) {
             // Set default commission rate and tax
             document.getElementById('commissionRate').value = exchangeRate;
             document.getElementById('commissionTax').value = 20;
+            // Initialize empty commission rows
+            loadCommissionsToForm([]);
 
             // Add form submit event listener
             document.getElementById('shipmentForm').addEventListener('submit', handleSubmit);
@@ -2734,20 +2735,165 @@ function appendAudit(sheet, d) {
             }, 3000);
         }
 
-        // Calculate commission
-        function calculateCommission() {
+        // ========== MULTI-COMMISSION SYSTEM ==========
+        // Each commission row: { id, name, cent, tax, rate, vnd, usd }
+        let commissionRows = [];
+        let comRowIdCounter = 0;
+
+        function addCommissionRow(prefill = {}) {
+            const id = ++comRowIdCounter;
+            const rate = prefill.rate || exchangeRate || 25300;
+            const row = {
+                id,
+                name: prefill.name || '',
+                cent: prefill.cent || 0,
+                tax:  prefill.tax  !== undefined ? prefill.tax : 20,
+                rate: rate,
+                vnd:  0,
+                usd:  0
+            };
+            commissionRows.push(row);
+            renderCommissionRows();
+            recalcAllCommissions();
+        }
+
+        function removeCommissionRow(id) {
+            commissionRows = commissionRows.filter(r => r.id !== id);
+            renderCommissionRows();
+            recalcAllCommissions();
+        }
+
+        function onCommissionInput(id, field, value) {
+            const row = commissionRows.find(r => r.id === id);
+            if (!row) return;
+            row[field] = parseFloat(value) || 0;
+            if (field === 'name') row[field] = value; // keep string
+            recalcAllCommissions();
+            // re-render just the result cells
             const cw = parseFloat(document.getElementById('cw').value) || 0;
-            const cent = parseFloat(document.getElementById('commissionCent').value) || 0;
-            const tax = parseFloat(document.getElementById('commissionTax').value) || 0;
-            const rate = parseFloat(document.getElementById('commissionRate').value) || exchangeRate;
+            const vndEl = document.getElementById('com-vnd-' + id);
+            const usdEl = document.getElementById('com-usd-' + id);
+            if (vndEl) vndEl.textContent = formatCurrency(row.vnd, 'VND');
+            if (usdEl) usdEl.textContent = '≈ ' + formatCurrency(row.usd);
+            updateCommissionTotal();
+        }
 
-            const commissionVND = cent * cw * (100 - tax) / 100 * rate;
-            const commissionUSD = commissionVND / rate;
+        function recalcAllCommissions() {
+            const cw = parseFloat(document.getElementById('cw').value) || 0;
+            commissionRows.forEach(row => {
+                row.vnd = row.cent * cw * (100 - row.tax) / 100 * row.rate;
+                row.usd = row.rate > 0 ? row.vnd / row.rate : 0;
+                const vndEl = document.getElementById('com-vnd-' + row.id);
+                const usdEl = document.getElementById('com-usd-' + row.id);
+                if (vndEl) vndEl.textContent = formatCurrency(row.vnd, 'VND');
+                if (usdEl) usdEl.textContent = '≈ ' + formatCurrency(row.usd);
+            });
+            updateCommissionTotal();
+        }
 
-            document.getElementById('calculatedCommission').textContent = formatCurrency(commissionVND, 'VND');
-            document.getElementById('commissionUSD').textContent = '≈ ' + formatCurrency(commissionUSD);
+        function updateCommissionTotal() {
+            const totalVND = commissionRows.reduce((s, r) => s + (r.vnd || 0), 0);
+            const totalUSD = commissionRows.reduce((s, r) => s + (r.usd || 0), 0);
+            const el = document.getElementById('calculatedCommission');
+            const elUSD = document.getElementById('commissionUSD');
+            if (el) el.textContent = formatCurrency(totalVND, 'VND');
+            if (elUSD) elUSD.textContent = '≈ ' + formatCurrency(totalUSD);
+        }
 
-            return commissionVND;
+        function renderCommissionRows() {
+            const container = document.getElementById('commissionRowsContainer');
+            if (!container) return;
+            if (commissionRows.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:18px;color:#94a3b8;font-size:13px;background:#f8fafc;border-radius:10px;border:2px dashed #e2e8f0;">
+                        Chưa có commission. Nhấn <strong style="color:#10b981;">➕ Thêm người nhận</strong> để bắt đầu.
+                    </div>`;
+                return;
+            }
+            container.innerHTML = commissionRows.map((row, idx) => `
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:10px;position:relative;">
+                    <!-- Header row -->
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                        <div style="width:26px;height:26px;background:linear-gradient(135deg,#d4af37,#b8860b);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1a1200;font-size:12px;font-weight:800;flex-shrink:0;">${idx+1}</div>
+                        <input type="text" 
+                            value="${escapeHtml(row.name)}"
+                            placeholder="Tên người nhận com (VD: Chị Hoa, Môi giới A...)"
+                            oninput="commissionRows[${idx}].name=this.value"
+                            style="flex:1;padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;color:#1e293b;background:white;"
+                            onfocus="this.style.borderColor='#d4af37'" onblur="this.style.borderColor='#e2e8f0'">
+                        <button type="button" onclick="removeCommissionRow(${row.id})"
+                            style="width:28px;height:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center;"
+                            title="Xóa commission này">✕</button>
+                    </div>
+                    <!-- Input fields -->
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px;">Ăn chênh (cent)</div>
+                            <input type="number" step="0.01" value="${row.cent||''}" placeholder="0.05"
+                                oninput="onCommissionInput(${row.id},'cent',this.value)"
+                                style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;"
+                                onfocus="this.style.borderColor='#d4af37'" onblur="this.style.borderColor='#e2e8f0'">
+                        </div>
+                        <div>
+                            <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px;">Thuế DN (%)</div>
+                            <input type="number" step="1" value="${row.tax}" placeholder="20"
+                                oninput="onCommissionInput(${row.id},'tax',this.value)"
+                                style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;"
+                                onfocus="this.style.borderColor='#d4af37'" onblur="this.style.borderColor='#e2e8f0'">
+                        </div>
+                        <div>
+                            <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px;">Tỷ giá (₫)</div>
+                            <input type="number" step="100" value="${row.rate}" placeholder="25300"
+                                oninput="onCommissionInput(${row.id},'rate',this.value)"
+                                style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;"
+                                onfocus="this.style.borderColor='#d4af37'" onblur="this.style.borderColor='#e2e8f0'">
+                        </div>
+                    </div>
+                    <!-- Result -->
+                    <div style="background:white;border:1px solid #d4af37;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:12px;color:#64748b;font-weight:600;">Thành tiền:</span>
+                        <div style="text-align:right;">
+                            <div id="com-vnd-${row.id}" style="font-weight:800;color:#10b981;font-size:16px;">${formatCurrency(row.vnd,'VND')}</div>
+                            <div id="com-usd-${row.id}" style="font-size:11px;color:#94a3b8;">≈ ${formatCurrency(row.usd)}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // Legacy shim — called from oninput on #cw field 
+        function calculateCommission() {
+            recalcAllCommissions();
+            // Return total VND for backward compat
+            return commissionRows.reduce((s, r) => s + (r.vnd || 0), 0);
+        }
+
+        // Build commissions array for saving
+        function buildCommissionsData() {
+            return commissionRows.map(r => ({
+                name: r.name,
+                cent: r.cent,
+                tax:  r.tax,
+                rate: r.rate,
+                vnd:  r.vnd,
+                usd:  r.usd
+            }));
+        }
+
+        // Load commissions into form (for edit mode)
+        function loadCommissionsToForm(commissionsArr) {
+            commissionRows = [];
+            comRowIdCounter = 0;
+            if (commissionsArr && commissionsArr.length > 0) {
+                commissionsArr.forEach(c => addCommissionRow(c));
+            } else {
+                renderCommissionRows();
+                updateCommissionTotal();
+            }
         }
 
         // Calculate total prices based on unit prices and CW
@@ -2835,8 +2981,11 @@ function appendAudit(sheet, d) {
         function handleSubmit(event) {
             event.preventDefault();
 
-            const commissionVND = calculateCommission();
-            const commissionRate = parseFloat(document.getElementById('commissionRate').value) || exchangeRate;
+            // Recalculate all commissions with latest CW
+            recalcAllCommissions();
+            const commissionsData = buildCommissionsData();
+            const commissionVND = commissionsData.reduce((s, c) => s + (c.vnd || 0), 0);
+            const commissionRate = (commissionsData.length > 0 ? commissionsData[0].rate : null) || exchangeRate;
             
             const cw = parseFloat(document.getElementById('cw').value) || 0;
             const gw = parseFloat(document.getElementById('gw').value) || 0;
@@ -2880,11 +3029,12 @@ function appendAudit(sheet, d) {
                 ams: ams,
                 paymentStatus: document.getElementById('paymentStatus').value,
                 customerNote: document.getElementById('customerNote').value,
-                commissionCent: parseFloat(document.getElementById('commissionCent').value) || 0,
-                commissionTax: parseFloat(document.getElementById('commissionTax').value) || 0,
+                commissionCent: (commissionsData[0] || {}).cent || 0,
+                commissionTax: (commissionsData[0] || {}).tax || 0,
                 commissionRate: commissionRate,
                 commissionVND: commissionVND,
-                commissionUSD: commissionVND / commissionRate
+                commissionUSD: commissionRate > 0 ? commissionVND / commissionRate : 0,
+                commissions: commissionsData
             };
 
             // Preserve comPaymentStatus when editing
@@ -2956,6 +3106,7 @@ function appendAudit(sheet, d) {
                 document.getElementById('commissionRate').value = exchangeRate;
                 document.getElementById('commissionTax').value = 20;
                 document.getElementById('xray').value = 0.017;
+                loadCommissionsToForm([]);
                 calculateCommission();
                 calculateTotalPrices();
             }
@@ -3210,10 +3361,44 @@ function appendAudit(sheet, d) {
             }
 
             tbody.innerHTML = filteredShipments.map(s => {
-                const commissionDisplay = s.commissionVND 
-                    ? `<div style="font-weight: 700; color: #10b981;">${formatCurrency(s.commissionVND, 'VND')}</div>
-                       <div style="font-size: 10px; color: #94a3b8;">${s.commissionCent}¢ × ${s.cw}kg</div>`
-                    : '-';
+                // Build commission display — supports both legacy single and new multi-commissions
+                let commissionDisplay = '-';
+                const comList = s.commissions && s.commissions.length > 0 
+                    ? s.commissions 
+                    : (s.commissionVND ? [{ name:'', cent: s.commissionCent, tax: s.commissionTax, rate: s.commissionRate, vnd: s.commissionVND, usd: s.commissionUSD }] : []);
+                
+                if (comList.length > 0) {
+                    const totalVND = comList.reduce((acc, c) => acc + (c.vnd || 0), 0);
+                    if (comList.length === 1) {
+                        const c = comList[0];
+                        commissionDisplay = `
+                            <div style="font-weight:700;color:#10b981;font-size:14px;">${formatCurrency(c.vnd || 0,'VND')}</div>
+                            ${c.name ? `<div style="font-size:10px;color:#3b82f6;font-weight:600;margin-top:2px;">👤 ${escapeHtml(c.name)}</div>` : ''}
+                            <div style="font-size:10px;color:#94a3b8;margin-top:1px;">${c.cent||0}¢ × ${s.cw||0}kg</div>`;
+                    } else {
+                        // Multiple commissions — show summary + expandable detail
+                        const rowId = 'com-detail-' + s.id;
+                        const detailRows = comList.map(c => `
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dashed #e2e8f0;">
+                                <span style="font-size:10px;color:#475569;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(c.name||'')}">
+                                    ${c.name ? '👤 ' + escapeHtml(c.name) : '—'}
+                                </span>
+                                <span style="font-size:11px;font-weight:700;color:#10b981;">${formatCurrency(c.vnd||0,'VND')}</span>
+                            </div>`).join('');
+                        commissionDisplay = `
+                            <div>
+                                <div style="font-weight:800;color:#10b981;font-size:14px;">${formatCurrency(totalVND,'VND')}</div>
+                                <div style="display:inline-flex;align-items:center;gap:3px;margin-top:3px;padding:2px 8px;background:#dbeafe;border-radius:20px;cursor:pointer;"
+                                    onclick="toggleComDetail('${rowId}')">
+                                    <span style="font-size:10px;font-weight:700;color:#1e40af;">${comList.length} người nhận</span>
+                                    <span id="${rowId}-icon" style="font-size:9px;color:#1e40af;">▼</span>
+                                </div>
+                                <div id="${rowId}" style="display:none;margin-top:6px;background:#f8fafc;border-radius:6px;padding:6px 8px;">
+                                    ${detailRows}
+                                </div>
+                            </div>`;
+                    }
+                }
 
                 const rateDisplay = s.commissionRate
                     ? `<div style="font-weight:700;color:#1e3a8a;">${new Intl.NumberFormat('vi-VN').format(s.commissionRate)}₫</div>`
@@ -3282,6 +3467,16 @@ function appendAudit(sheet, d) {
                     </tr>
                 `;
             }).join('');
+        }
+
+        // Toggle commission detail in table
+        function toggleComDetail(rowId) {
+            const el = document.getElementById(rowId);
+            const icon = document.getElementById(rowId + '-icon');
+            if (!el) return;
+            const hidden = el.style.display === 'none';
+            el.style.display = hidden ? 'block' : 'none';
+            if (icon) icon.textContent = hidden ? '▲' : '▼';
         }
 
         // ========== DELETE HISTORY ==========
@@ -3502,20 +3697,28 @@ function appendAudit(sheet, d) {
             let updatedCount = 0;
             shipments = shipments.map(s => {
                 if (ids.includes(s.id)) {
-                    const oldRate = s.commissionRate || exchangeRate;
+                    // Recalculate all commissions in commissions array
+                    let newCommissions = s.commissions && s.commissions.length > 0
+                        ? s.commissions.map(c => {
+                            const newVND = c.cent * (s.cw||0) * (100 - c.tax) / 100 * newRate;
+                            return { ...c, rate: newRate, vnd: newVND, usd: newVND / newRate };
+                          })
+                        : null;
                     
-                    // Recalculate commission with new rate
-                    const cent = s.commissionCent || 0;
+                    const cent = (s.commissions && s.commissions[0]) ? s.commissions[0].cent : (s.commissionCent || 0);
                     const cw = s.cw || 0;
-                    const tax = s.commissionTax || 0;
-                    const newCommissionVND = cent * cw * (100 - tax) / 100 * newRate;
+                    const tax = (s.commissions && s.commissions[0]) ? s.commissions[0].tax : (s.commissionTax || 0);
+                    const newCommissionVND = newCommissions 
+                        ? newCommissions.reduce((acc, c) => acc + c.vnd, 0) 
+                        : cent * cw * (100 - tax) / 100 * newRate;
                     
                     updatedCount++;
                     return {
                         ...s,
                         commissionRate: newRate,
                         commissionVND: newCommissionVND,
-                        commissionUSD: newCommissionVND / newRate
+                        commissionUSD: newCommissionVND / newRate,
+                        ...(newCommissions ? { commissions: newCommissions } : {})
                     };
                 }
                 return s;
@@ -4707,6 +4910,23 @@ function appendAudit(sheet, d) {
             document.getElementById('commissionCent').value = shipment.commissionCent || 0;
             document.getElementById('commissionTax').value = shipment.commissionTax || 20;
             document.getElementById('commissionRate').value = shipment.commissionRate || exchangeRate;
+            
+            // Load multi-commission rows
+            if (shipment.commissions && shipment.commissions.length > 0) {
+                loadCommissionsToForm(shipment.commissions);
+            } else if (shipment.commissionCent || shipment.commissionVND) {
+                // Migrate legacy single commission
+                loadCommissionsToForm([{
+                    name: '',
+                    cent: shipment.commissionCent || 0,
+                    tax:  shipment.commissionTax || 20,
+                    rate: shipment.commissionRate || exchangeRate,
+                    vnd:  shipment.commissionVND || 0,
+                    usd:  shipment.commissionUSD || 0
+                }]);
+            } else {
+                loadCommissionsToForm([]);
+            }
             const submitBtn = document.querySelector('#shipmentForm button[type="submit"]');
             submitBtn.innerHTML = '💾 Cập nhật Lô Hàng';
             submitBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
@@ -4742,6 +4962,8 @@ function appendAudit(sheet, d) {
             document.getElementById('commissionRate').value = exchangeRate;
             document.getElementById('commissionTax').value = 20;
             document.getElementById('xray').value = 0.017;
+            // Reset commission rows
+            loadCommissionsToForm([]);
             calculateCommission();
             calculateTotalPrices();
 
@@ -4877,9 +5099,14 @@ function appendAudit(sheet, d) {
                 return;
             }
 
-            let csv = 'Company,Customer Name,Ready Date,Carrier,Destination,MAWB,CW,GW,Purchase Unit Price,Selling Unit Price,Selling Total,Purchase Total,Make Unit Price,Make Total,X-Ray,AWB,AMS,Profit,Commission (VND),Com Cent,Com Tax %,Com Rate,Com Status,Payment Status,Customer Note\n';
+            let csv = 'Company,Customer Name,Ready Date,Carrier,Destination,MAWB,CW,GW,Purchase Unit Price,Selling Unit Price,Selling Total,Purchase Total,Make Unit Price,Make Total,X-Ray,AWB,AMS,Profit,Total Commission (VND),Commission Detail,Com Status,Payment Status,Customer Note\n';
             
             shipments.forEach(s => {
+                const comList = s.commissions && s.commissions.length > 0 
+                    ? s.commissions 
+                    : (s.commissionVND ? [{ name:'', cent: s.commissionCent, tax: s.commissionTax, rate: s.commissionRate, vnd: s.commissionVND }] : []);
+                const totalComVND = comList.reduce((acc, c) => acc + (c.vnd||0), 0);
+                const comDetail = comList.map(c => (c.name ? c.name + ':' : '') + Math.round(c.vnd||0) + 'đ(' + (c.cent||0) + 'c)').join(' | ');
                 const row = [
                     s.company,
                     s.customerName || '',
@@ -4899,13 +5126,11 @@ function appendAudit(sheet, d) {
                     s.awb || 0,
                     s.ams || 0,
                     (s.profit || 0).toFixed(2),
-                    Math.round(s.commissionVND || 0),
-                    s.commissionCent || 0,
-                    s.commissionTax || 0,
-                    s.commissionRate || 0,
+                    Math.round(totalComVND),
+                    '"' + comDetail.replace(/"/g, '""') + '"',
                     (s.comPaymentStatus || 'com_pending') === 'com_paid' ? 'Đã trả com' : 'Chưa trả com',
                     s.paymentStatus,
-                    (s.customerNote || '').replace(/,/g, ';')
+                    '"' + (s.customerNote || '').replace(/"/g, '""') + '"'
                 ].join(',');
                 csv += row + '\n';
             });
@@ -4996,11 +5221,14 @@ function appendAudit(sheet, d) {
                     if (inputEl) inputEl.value = exchangeRate;
                     document.getElementById('exchangeUpdate').textContent = `VCB - Cập nhật: ${new Date().toLocaleTimeString('vi-VN')}`;
                     
-                    const commissionRateField = document.getElementById('commissionRate');
-                    if (!commissionRateField.value || commissionRateField.value == 25300) {
-                        commissionRateField.value = exchangeRate;
-                        calculateCommission();
-                    }
+                    // Update any commission rows that still have default/old rate
+                    commissionRows.forEach(r => {
+                        if (!r.rate || r.rate === 25300) {
+                            r.rate = exchangeRate;
+                        }
+                    });
+                    renderCommissionRows();
+                    recalcAllCommissions();
                     
                     updateDashboard();
                 }
