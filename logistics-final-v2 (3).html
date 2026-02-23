@@ -5355,54 +5355,118 @@ function appendAudit(sheet, d) {
         //  ĐỒNG BỘ DỮ LIỆU TỪ GOOGLE SHEETS VỀ WEB
         // ================================================================
         // ================================================================
-        //  JSONP HELPER - bypass CORS cho Apps Script GET request
-        //  Apps Script redirect từ /exec → /exec/usercodehandler, fetch cors bị block
-        //  JSONP không bị CORS vì dùng <script> tag
+        //  ĐỌC DỮ LIỆU SHEETS QUA GOOGLE VISUALIZATION API (PUBLIC)
+        //  Không cần CORS, không cần Apps Script GET
+        //  Sheet phải được share "Anyone with link can view"
         // ================================================================
-        function fetchSheetsJsonp(scriptUrl, sheetId) {
-            return new Promise((resolve, reject) => {
-                const cbName = '__gsJsonpCb_' + Date.now();
-                const timeout = setTimeout(() => {
-                    cleanup();
-                    reject(new Error('Timeout: Apps Script không phản hồi sau 30 giây.\nKiểm tra Script URL và deploy.'));
-                }, 30000);
+        async function fetchSheetsData(sheetId) {
+            // Google Sheets Visualization API - trả về JSONP tự động
+            // Format: https://docs.google.com/spreadsheets/d/{ID}/gviz/tq?tqx=out:json&sheet=...
+            const sheetName = encodeURIComponent('DATA KHÁCH HÀNG');
+            const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
 
-                function cleanup() {
-                    clearTimeout(timeout);
-                    delete window[cbName];
-                    const el = document.getElementById('__gsJsonpScript');
-                    if (el) el.remove();
-                }
+            const response = await fetch(url, { method: 'GET' });
+            if (!response.ok) throw new Error('HTTP ' + response.status + ' — Sheet có thể chưa được share public (Anyone with link)');
 
-                window[cbName] = function(data) {
-                    cleanup();
-                    if (!data) return reject(new Error('Không nhận được dữ liệu từ Sheets'));
-                    if (data.status === 'Error') return reject(new Error(data.message || 'Lỗi Apps Script'));
-                    resolve(data.data || []);
-                };
+            const text = await response.text();
 
-                const src = scriptUrl
-                    + '?action=getActiveShipments'
-                    + '&sheetId=' + encodeURIComponent(sheetId)
-                    + '&callback=' + cbName
-                    + '&t=' + Date.now();
+            // Google trả về: google.visualization.Query.setResponse({...})
+            // Cần strip wrapper này để parse JSON
+            const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!match) throw new Error('Không parse được dữ liệu từ Sheets — định dạng không hợp lệ');
 
-                const script = document.createElement('script');
-                script.id  = '__gsJsonpScript';
-                script.src = src;
-                script.onerror = () => {
-                    cleanup();
-                    reject(new Error('Không tải được script từ Apps Script.\nKiểm tra Script URL có đúng không.'));
-                };
-                document.head.appendChild(script);
-            });
+            const gviz = JSON.parse(match[1]);
+            if (gviz.status === 'error') {
+                const errMsg = (gviz.errors || []).map(e => e.detailed_message || e.message).join('; ');
+                throw new Error('Sheets API lỗi: ' + errMsg);
+            }
+
+            const table = gviz.table;
+            if (!table || !table.rows) return [];
+
+            // Map columns — dựa theo HEADERS_SHIPMENT (31 cột)
+            // col index: 0=ID, 1=Cty, 2=KH, 3=Date, 4=Carrier, 5=Dest, 6=MAWB,
+            //            7=CW, 8=GW, 9=PurUnit, 10=SelUnit, 11=PurTotal, 12=SelTotal,
+            //            13=Make, 14=Xray, 15=AWB, 16=AMS, 17=Profit,
+            //            18=ComVND, 19=ComCent, 20=ComTax, 21=ComRate,
+            //            22=ComStatus, 23=PayStatus, 24=Note,
+            //            25=CreatedAt, 26=UpdatedAt, 27=UpdatedBy,
+            //            28=DataStatus, 29=DeletedAt, 30=DeletedBy
+
+            function cellVal(row, idx) {
+                if (!row.c || !row.c[idx]) return null;
+                const c = row.c[idx];
+                return (c.v !== null && c.v !== undefined) ? c.v : (c.f || null);
+            }
+            function strVal(row, idx)   { const v = cellVal(row, idx); return v != null ? String(v) : ''; }
+            function numVal(row, idx)   { const v = cellVal(row, idx); return parseFloat(v) || 0; }
+
+            const results = [];
+            for (let i = 0; i < table.rows.length; i++) {
+                const row = table.rows[i];
+                if (!row || !row.c) continue;
+
+                // Bỏ qua header row nếu có (row đầu tiên có giá trị = tên cột)
+                const firstCell = strVal(row, 0);
+                if (firstCell === 'ID' || firstCell === '') continue;
+
+                // Chỉ lấy hàng DANG HOAT DONG
+                const dataStatus = strVal(row, 28).trim().toUpperCase();
+                if (dataStatus === 'DA XOA') continue;
+
+                const pur = numVal(row, 11);
+                const sel = numVal(row, 12);
+                const cw  = numVal(row, 7);
+
+                // Parse paymentStatus từ tiếng Việt → key
+                const payRaw = strVal(row, 23).toLowerCase();
+                const payStatus = payRaw.includes('đã') || payRaw.includes('da') ? 'paid' : 'pending';
+
+                // Parse comPaymentStatus
+                const comRaw = strVal(row, 22).toLowerCase();
+                const comStatus = comRaw.includes('đã') || comRaw.includes('da') ? 'com_paid' : 'com_pending';
+
+                const id = strVal(row, 0);
+                results.push({
+                    id:               isNaN(Number(id)) ? id : Number(id),
+                    company:          strVal(row, 1),
+                    customerName:     strVal(row, 2),
+                    readyDate:        strVal(row, 3).substring(0, 10),
+                    carrier:          strVal(row, 4),
+                    dest:             strVal(row, 5),
+                    mawb:             strVal(row, 6),
+                    cw:               cw,
+                    gw:               numVal(row, 8),
+                    purchaseUnitPrice:numVal(row, 9),
+                    sellingUnitPrice: numVal(row, 10),
+                    purchasePrice:    pur,
+                    sellingPrice:     sel,
+                    makePrice:        numVal(row, 13),
+                    makeUnitPrice:    cw > 0 ? (sel - pur) / cw : 0,
+                    xray:             numVal(row, 14),
+                    awb:              numVal(row, 15),
+                    ams:              numVal(row, 16),
+                    profit:           numVal(row, 17),
+                    commissionVND:    numVal(row, 18),
+                    commissionCent:   numVal(row, 19),
+                    commissionTax:    numVal(row, 20),
+                    commissionRate:   numVal(row, 21),
+                    comPaymentStatus: comStatus,
+                    paymentStatus:    payStatus,
+                    customerNote:     strVal(row, 24),
+                    createdAt:        strVal(row, 25) || new Date().toISOString(),
+                    updatedAt:        strVal(row, 26),
+                    updatedBy:        strVal(row, 27),
+                });
+            }
+            return results;
         }
 
         function showSyncFromSheetsModal() {
             const existing = document.getElementById('syncSheetsModal');
             if (existing) { existing.remove(); return; }
 
-            const hasConfig = !!(SHEETS_CONFIG.scriptUrl && SHEETS_CONFIG.sheetId);
+            const hasConfig = !!(SHEETS_CONFIG.sheetId); // Chỉ cần Sheet ID, không cần Script URL
 
             const modal = document.createElement('div');
             modal.id = 'syncSheetsModal';
@@ -5424,19 +5488,29 @@ function appendAudit(sheet, d) {
 
                     <div style="padding:24px 28px;">
 
-                        <!-- Cảnh báo nếu chưa cấu hình -->
-                        ${!hasConfig ? `
-                        <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:20px;">
-                            <div style="font-weight:700;color:#92400e;font-size:13px;margin-bottom:4px;">⚠️ Chưa cấu hình Google Sheets</div>
-                            <div style="font-size:12px;color:#92400e;">Vào <strong>📊 Sheets</strong> để cấu hình Script URL và Sheet ID trước.</div>
+                        <!-- Cảnh báo nếu chưa có Sheet ID -->
+                        ${!SHEETS_CONFIG.sheetId ? `
+                        <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+                            <div style="font-weight:700;color:#92400e;font-size:13px;margin-bottom:4px;">⚠️ Chưa có Sheet ID</div>
+                            <div style="font-size:12px;color:#92400e;">Vào <strong>📊 Sheets</strong> để điền Sheet ID trước.</div>
                         </div>` : ''}
 
-                        <!-- Thông tin config hiện tại -->
-                        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px 16px;margin-bottom:20px;">
-                            <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px;">📋 Cấu hình hiện tại</div>
-                            <div style="font-size:11px;color:#166534;line-height:1.8;">
-                                <div>Script URL: <strong style="word-break:break-all;">${SHEETS_CONFIG.scriptUrl ? SHEETS_CONFIG.scriptUrl.substring(0,60)+'...' : '❌ Chưa có'}</strong></div>
-                                <div>Sheet ID: <strong>${SHEETS_CONFIG.sheetId || '❌ Chưa có'}</strong></div>
+                        <!-- Thông tin config + hướng dẫn share -->
+                        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+                            <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px;">📋 Thông tin đồng bộ</div>
+                            <div style="font-size:11px;color:#166534;line-height:1.9;">
+                                <div>Sheet ID: <strong style="word-break:break-all;">${SHEETS_CONFIG.sheetId || '❌ Chưa có'}</strong></div>
+                                <div>Tab sheet: <strong>DATA KHÁCH HÀNG</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Yêu cầu bắt buộc -->
+                        <div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+                            <div style="font-size:12px;font-weight:700;color:#9a3412;margin-bottom:8px;">⚠️ Yêu cầu bắt buộc trước khi đồng bộ</div>
+                            <div style="font-size:11px;color:#9a3412;line-height:2;">
+                                <div>1. Mở Google Sheet → <strong>Share (Chia sẻ)</strong></div>
+                                <div>2. Đổi quyền thành: <strong>"Anyone with the link → Viewer"</strong></div>
+                                <div>3. Tên tab sheet phải đúng là: <strong>DATA KHÁCH HÀNG</strong></div>
                             </div>
                         </div>
 
@@ -5510,8 +5584,8 @@ function appendAudit(sheet, d) {
         }
 
         async function doSyncFromSheets() {
-            if (!SHEETS_CONFIG.scriptUrl || !SHEETS_CONFIG.sheetId) {
-                showNotification('⚠️ Chưa cấu hình Google Sheets!', 'error');
+            if (!SHEETS_CONFIG.sheetId) {
+                showNotification('⚠️ Chưa có Sheet ID! Vào 📊 Sheets để cấu hình.', 'error');
                 return;
             }
 
@@ -5543,11 +5617,8 @@ function appendAudit(sheet, d) {
             try {
                 setProgress(20, '🔗 Đang kết nối Google Sheets...');
 
-                // Dùng JSONP để bypass CORS của Apps Script redirect
-                const sheetsData = await fetchSheetsJsonp(
-                    SHEETS_CONFIG.scriptUrl,
-                    SHEETS_CONFIG.sheetId
-                );
+                // Dùng Google Visualization API (không cần Apps Script, không bị CORS)
+                const sheetsData = await fetchSheetsData(SHEETS_CONFIG.sheetId);
 
                 if (!sheetsData || sheetsData.length === 0) {
                     throw new Error('Không có lô hàng "Đang hoạt động" nào trong Sheets!');
