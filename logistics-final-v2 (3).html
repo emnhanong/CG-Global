@@ -52,7 +52,7 @@
         }
         
         #mainContent {
-            padding-top: 10px;
+            padding-top: 160px; /* safe fallback - JS will override with exact height */
         }
 
         .sticky-top.scrolled {
@@ -657,6 +657,265 @@
             to   { opacity: 1; transform: scale(1); }
         }
 
+        /* ═══════════ MOBILE CARD VIEW ═══════════ */
+        /* Mobile shipment cards - hidden on desktop */
+        .mobile-card-list { display: none; }
+
+        .mob-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1px solid #f0e8c8;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+        .mob-card:active { box-shadow: 0 4px 20px rgba(212,175,55,0.2); }
+
+        .mob-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px 10px;
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            border-bottom: 1px solid #f0e8c8;
+            gap: 8px;
+        }
+        .mob-card-company {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e293b;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .mob-card-customer {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .mob-card-date {
+            font-size: 11px;
+            color: #94a3b8;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+        .mob-card-body {
+            padding: 12px 14px;
+        }
+        .mob-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #f8fafc;
+            font-size: 13px;
+        }
+        .mob-card-row:last-child { border-bottom: none; }
+        .mob-card-label {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .mob-card-value {
+            font-weight: 700;
+            color: #1e293b;
+            text-align: right;
+            font-size: 13px;
+        }
+        .mob-card-value.profit-pos { color: #10b981; }
+        .mob-card-value.profit-neg { color: #ef4444; }
+        .mob-card-value.blue { color: #3b82f6; }
+
+        .mob-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-top: 1px solid #f0e8c8;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .mob-card-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .mob-card-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .mob-btn-edit, .mob-btn-del {
+            padding: 7px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .mob-btn-edit {
+            background: linear-gradient(135deg, #d4af37, #b8860b);
+            color: #1a1200;
+        }
+        .mob-btn-del {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .mob-card-mawb {
+            font-size: 11px;
+            color: #94a3b8;
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+        .mob-info-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            padding: 8px 14px 4px;
+        }
+        .mob-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #f1f5f9;
+            color: #475569;
+        }
+        .mob-pill.gold { background: #fef3c7; color: #92400e; }
+        .mob-pill.blue { background: #dbeafe; color: #1e40af; }
+
+        /* Mobile-only FAB for adding shipment */
+        .mob-fab {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #d4af37, #b8860b);
+            color: #1a1200;
+            border: none;
+            font-size: 24px;
+            font-weight: 700;
+            box-shadow: 0 4px 20px rgba(212,175,55,0.5);
+            cursor: pointer;
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .mob-fab:active {
+            transform: scale(0.93);
+            box-shadow: 0 2px 12px rgba(212,175,55,0.4);
+        }
+
+        /* Mobile bottom tab bar */
+        .mob-bottom-bar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, #1c1400 0%, #0d0d0d 100%);
+            border-top: 1.5px solid rgba(212,175,55,0.25);
+            padding: 6px 0 max(10px, env(safe-area-inset-bottom));
+            z-index: 400;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+        }
+        .mob-tab-items {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .mob-tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            padding: 5px 14px;
+            border-radius: 12px;
+            transition: background 0.15s;
+            -webkit-tap-highlight-color: transparent;
+            border: none;
+            background: transparent;
+            min-width: 64px;
+        }
+        .mob-tab-item.active {
+            background: rgba(212,175,55,0.1);
+        }
+        .mob-tab-item.active .mob-tab-icon { color: #d4af37; }
+        .mob-tab-item.active .mob-tab-label { color: #d4af37; font-weight: 700; }
+        .mob-tab-icon { font-size: 22px; color: rgba(212,175,55,0.4); transition: color 0.15s; line-height: 1; }
+        .mob-tab-label { font-size: 10.5px; color: rgba(212,175,55,0.4); font-weight: 600; transition: color 0.15s; letter-spacing: 0.2px; white-space: nowrap; }
+
+        /* Settings quick menu button */
+        .mob-settings-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 14px;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: rgba(212,175,55,0.9);
+            font-size: 14px;
+            font-weight: 600;
+            text-align: left;
+            transition: background 0.15s;
+            -webkit-tap-highlight-color: transparent;
+            margin-bottom: 2px;
+        }
+        .mob-settings-btn:active, .mob-settings-btn:hover {
+            background: rgba(212,175,55,0.12);
+        }
+        .mob-settings-btn span:first-child {
+            font-size: 20px;
+            width: 28px;
+            text-align: center;
+        }
+
+        /* Mobile view sections */
+        .mob-section { display: none; }
+
+        /* Collapsible add form on mobile */
+        .mob-form-toggle {
+            display: none;
+            width: 100%;
+            padding: 13px 16px;
+            background: linear-gradient(135deg, #d4af37, #b8860b);
+            color: #1a1200;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 14px rgba(212,175,55,0.35);
+        }
+        .mob-form-toggle .toggle-arrow { transition: transform 0.25s; display: inline-block; margin-left: 6px; }
+        .mob-form-toggle.open .toggle-arrow { transform: rotate(180deg); }
+        .mob-collapsible { overflow: hidden; transition: max-height 0.35s ease; max-height: 9999px; }
+        .mob-collapsible.collapsed { max-height: 0; }
+
         /* ═══════════ RESPONSIVE ═══════════ */
         @media (max-width: 1200px) {
             .dashboard { grid-template-columns: repeat(3, 1fr); gap: 14px; }
@@ -879,6 +1138,225 @@
             .exchange-rate input { width: 62px !important; font-size: 12px !important; }
             .period-btn { padding: 4px 8px !important; font-size: 10px !important; }
         }
+
+        /* ══════════════════════════════════════
+           MOBILE FIRST — full rewrite ≤ 600px
+           ══════════════════════════════════════ */
+        @media (max-width: 600px) {
+
+            /* ─── Body & container ─── */
+            body { padding: 0; }
+            .container { padding: 8px 10px max(80px, calc(70px + env(safe-area-inset-bottom))) !important; }
+            #mainContent { padding-top: 175px !important; } /* overridden by JS after measuring actual header height */
+
+            /* ─── Sticky header: compact single row ─── */
+            .sticky-top {
+                padding: max(10px, env(safe-area-inset-top)) 12px 8px !important;
+                border-bottom: 1px solid rgba(212,175,55,0.15);
+            }
+            .header {
+                padding: 6px 8px !important;
+                border-radius: 10px !important;
+                margin-bottom: 5px !important;
+                gap: 5px !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+                overflow: visible !important;
+            }
+            .header-left {
+                gap: 5px !important;
+                flex: 0 0 auto !important;
+                min-width: 0 !important;
+            }
+            .header-left img { height: 26px !important; flex-shrink: 0; }
+            .header-left h1 { font-size: 12px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+            .header-left p { display: none !important; }
+            .header > div:last-child {
+                gap: 4px !important;
+                flex-wrap: nowrap !important;
+                flex: 1 1 auto !important;
+                justify-content: flex-end;
+                overflow: hidden;
+            }
+
+            /* Exchange rate: ultra compact */
+            .exchange-rate {
+                padding: 4px 6px !important;
+                border-radius: 7px !important;
+                text-align: left !important;
+            }
+            .exchange-rate-label { display: none !important; }
+            .exchange-rate > div:first-of-type { gap: 4px !important; }
+            .exchange-rate input {
+                width: 62px !important;
+                font-size: 12px !important;
+                padding: 2px 3px !important;
+            }
+            .exchange-rate span { font-size: 13px !important; }
+            .exchange-rate button { padding: 2px 5px !important; font-size: 10px !important; }
+            .exchange-rate-update { display: none !important; }
+            .exchange-rate-value { font-size: 13px; }
+
+            /* Firebase + Sheets: icon only on mobile */
+            #fbStatusBadge,
+            #syncSheetsBtn,
+            #sheetsBtn {
+                padding: 5px 7px !important;
+                gap: 0 !important;
+                min-width: 32px !important;
+                max-width: 32px !important;
+                justify-content: center !important;
+                border-radius: 8px !important;
+                flex-shrink: 0 !important;
+            }
+            #fbStatusBadge .btn-text,
+            #syncSheetsBtn .btn-text,
+            #sheetsBtn .btn-text { display: none !important; }
+            #fbStatusBadge .btn-icon,
+            #syncSheetsBtn .btn-icon,
+            #sheetsBtn .btn-icon { font-size: 16px !important; }
+            
+            /* User badge: icon only */
+            .user-badge {
+                padding: 5px 6px !important;
+                flex-shrink: 0 !important;
+            }
+
+            .user-badge > div { display: none !important; }
+            .user-badge span:first-child { font-size: 17px !important; }
+
+            /* ─── Period bar ─── */
+            .dashboard-period-bar {
+                padding: 7px 10px !important;
+                gap: 5px !important;
+                margin-bottom: 10px !important;
+                border-radius: 10px !important;
+                overflow-x: auto;
+                flex-wrap: nowrap !important;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .dashboard-period-bar::-webkit-scrollbar { display: none; }
+            .dashboard-period-bar > span { display: none !important; }
+            .period-btn {
+                padding: 5px 10px !important;
+                font-size: 11px !important;
+                flex-shrink: 0;
+            }
+
+            /* ─── Dashboard: 2-col compact ─── */
+            .dashboard {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 7px !important;
+                margin-bottom: 10px !important;
+            }
+            .stat-card {
+                padding: 11px 12px !important;
+                border-radius: 14px !important;
+                box-shadow: 0 3px 10px rgba(0,0,0,0.07) !important;
+            }
+            .stat-card:hover { transform: none !important; }
+            .stat-icon { width: 30px !important; height: 30px !important; font-size: 14px !important; margin-bottom: 7px !important; }
+            .stat-label { font-size: 9.5px !important; margin-bottom: 3px !important; }
+            .stat-value { font-size: 17px !important; margin-bottom: 2px !important; }
+            .stat-subvalue { font-size: 9.5px !important; }
+            /* Last card full-width */
+            .stat-card.margin { grid-column: span 2; }
+
+            /* ─── Cards ─── */
+            .card {
+                padding: 14px 12px !important;
+                border-radius: 14px !important;
+                margin-bottom: 12px !important;
+            }
+            .card-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                margin-bottom: 12px !important;
+                padding-bottom: 10px !important;
+                gap: 8px !important;
+            }
+            .card-title { font-size: 15px !important; }
+            .card-header > div {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                width: 100% !important;
+            }
+            .btn { padding: 8px 12px !important; font-size: 12px !important; }
+            .btn-sm { padding: 7px 10px !important; font-size: 11px !important; }
+
+            /* ─── Form ─── */
+            .form-grid { grid-template-columns: 1fr 1fr !important; gap: 9px !important; }
+            .form-label { font-size: 11.5px !important; margin-bottom: 4px !important; }
+            .form-input, .form-select {
+                padding: 10px 11px !important;
+                font-size: 13px !important;
+                border-radius: 9px !important;
+            }
+
+            /* ─── Commission box ─── */
+            .commission-box { padding: 12px !important; border-radius: 11px !important; }
+            .commission-result { padding: 11px !important; }
+
+            /* ─── Filter bar ─── */
+            .filter-bar {
+                flex-direction: column !important;
+                padding: 10px 11px !important;
+                gap: 7px !important;
+                border-radius: 12px !important;
+            }
+            .filter-divider { display: none !important; }
+            .filter-select-group { gap: 7px !important; }
+            .filter-select-label { min-width: 60px !important; font-size: 10.5px !important; }
+            .filter-select { flex: 1 !important; font-size: 12px !important; }
+            .filter-clear-btn { justify-content: center !important; }
+
+            /* ─── Summary box ─── */
+            .summary-box { padding: 12px !important; border-radius: 12px !important; }
+            .summary-grid { grid-template-columns: 1fr 1fr !important; gap: 7px !important; }
+            .summary-item { flex-direction: column !important; gap: 1px !important; font-size: 11px !important; }
+            .summary-value { font-size: 13px !important; }
+
+            /* ─── TABLE: HIDE on mobile, show card list ─── */
+            .table-wrapper,
+            .table-container,
+            .shipment-table { display: none !important; }
+            .mobile-card-list { display: block !important; }
+
+            /* Mobile toggle form button */
+            .mob-form-toggle { display: block; }
+
+            /* Mobile bottom bar + FAB */
+            .mob-bottom-bar { display: block; }
+            .mob-fab { display: flex; }
+
+            /* ─── Login ─── */
+            .login-overlay { padding: 0 !important; align-items: flex-end !important; }
+            .login-box {
+                padding: 28px 18px max(32px, env(safe-area-inset-bottom)) !important;
+                border-radius: 20px 20px 0 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+            .login-logo h2 { font-size: 22px !important; }
+
+            /* ─── Notification: full width on mobile ─── */
+            .notification {
+                top: auto !important;
+                bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+                right: 12px !important;
+                left: 12px !important;
+                max-width: none !important;
+            }
+
+            /* ─── Modals: full screen bottom sheet ─── */
+        }
+        @media (max-width: 400px) {
+            .form-grid { grid-template-columns: 1fr !important; }
+            .stat-card.margin { grid-column: span 2; }
+            .mob-card-company { font-size: 13px; }
+        }
         /* ========== LOGIN SCREEN ========== */
         .login-overlay {
             position: fixed; inset: 0;
@@ -992,6 +1470,60 @@
     <!-- Notification -->
     <div class="notification" id="notification"></div>
 
+    <!-- Mobile Bottom Tab Bar -->
+    <nav class="mob-bottom-bar" id="mobBottomBar">
+        <div class="mob-tab-items">
+            <button class="mob-tab-item active" id="mobTab-add" onclick="mobSwitchTab('add')">
+                <span class="mob-tab-icon">➕</span>
+                <span class="mob-tab-label">Thêm mới</span>
+            </button>
+            <button class="mob-tab-item" id="mobTab-summary" onclick="mobSwitchTab('summary')">
+                <span class="mob-tab-icon">📊</span>
+                <span class="mob-tab-label">Tổng kết</span>
+            </button>
+            <button class="mob-tab-item" id="mobTab-settings" onclick="mobSwitchTab('settings')">
+                <span class="mob-tab-icon">⚙️</span>
+                <span class="mob-tab-label">Cài đặt</span>
+            </button>
+        </div>
+    </nav>
+    <!-- Settings Quick Menu (popup above bottom bar) -->
+    <div id="mobSettingsMenu" style="
+        display:none;
+        position:fixed;
+        bottom:calc(60px + env(safe-area-inset-bottom));
+        left:12px; right:12px;
+        background:linear-gradient(160deg,#1c1400,#2d1f00);
+        border:1.5px solid rgba(212,175,55,0.35);
+        border-radius:18px;
+        z-index:450;
+        box-shadow:0 -8px 32px rgba(0,0,0,0.55);
+        overflow:hidden;
+    ">
+        <div style="padding:12px 16px 8px;border-bottom:1px solid rgba(212,175,55,0.15);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;font-weight:700;color:#d4af37;">⚙️ Cài đặt nhanh</span>
+            <button onclick="closeMobSettings()" style="background:none;border:none;color:rgba(212,175,55,0.6);font-size:18px;cursor:pointer;padding:0 4px;">✕</button>
+        </div>
+        <div style="padding:8px;">
+            <button class="mob-settings-btn" onclick="closeMobSettings();showFirebaseConfigModal();">
+                <span>🔥</span><span>Firebase</span>
+            </button>
+            <button class="mob-settings-btn" onclick="closeMobSettings();showSyncFromSheetsModal();">
+                <span>🔄</span><span>Đồng bộ Sheets</span>
+            </button>
+            <button class="mob-settings-btn" onclick="closeMobSettings();showSheetsConfigModal();">
+                <span>📊</span><span>Kết nối Sheets</span>
+            </button>
+            <button class="mob-settings-btn" onclick="closeMobSettings();showUserManagementModal();">
+                <span>👤</span><span>Quản lý Admin</span>
+            </button>
+            <button class="mob-settings-btn" onclick="closeMobSettings();document.getElementById('exchangeRateInput').focus();document.getElementById('exchangeRateInput').select();">
+                <span>💱</span><span>Chỉnh tỷ giá</span>
+            </button>
+        </div>
+    </div>
+
+
     <!-- Sticky Header Wrapper (Fixed - outside container) -->
     <div class="sticky-top" id="stickyTop">
           <div class="sticky-inner">
@@ -1027,15 +1559,15 @@
                 <!-- Firebase status badge -->
                 <div id="fbStatusBadge" onclick="showFirebaseConfigModal()" title="Cấu hình Firebase"
                     style="padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;white-space:nowrap;">
-                    ⚠️ Firebase: Chưa kết nối
+                    <span class="btn-icon">⚠️</span><span class="btn-text"> Firebase: Chưa kết nối</span>
                 </div>
                 <button id="syncSheetsBtn" onclick="showSyncFromSheetsModal()" title="Đồng bộ dữ liệu từ Google Sheets về web"
                     style="padding:10px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#0f9d58,#0d7a46);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
-                    🔄 Đồng bộ Sheets
+                    <span class="btn-icon">🔄</span><span class="btn-text">Đồng bộ Sheets</span>
                 </button>
                 <button id="sheetsBtn" onclick="showSheetsConfigModal()" title="Kết nối Google Sheets"
                     style="padding:10px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#64748b,#475569);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
-                    📊 Sheets
+                    <span class="btn-icon">📊</span><span class="btn-text">Sheets</span>
                 </button>
             </div>
         </div>
@@ -1058,7 +1590,7 @@
         </div><!-- /sticky-top -->
 
     <!-- Main container (offset for fixed header) -->
-    <div class="container" id="mainContent" style="padding-top: 20px;">
+    <div class="container" id="mainContent">
 
         <!-- Dashboard Stats -->
         <div class="dashboard">
@@ -1396,7 +1928,17 @@
                     </div>
                 </div>
 
-                <div class="table-wrapper"><div class="table-container">
+                
+                <!-- Mobile Card List (shown on mobile, hidden on desktop) -->
+                <div class="mobile-card-list" id="mobileCardList">
+                    <div style="text-align:center;padding:40px 20px;color:#94a3b8;">
+                        <div style="font-size:36px;margin-bottom:12px;">📦</div>
+                        <div style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:6px;">Chưa có lô hàng</div>
+                        <div style="font-size:13px;">Nhấn ➕ để thêm lô hàng đầu tiên</div>
+                    </div>
+                </div>
+
+<div class="table-wrapper"><div class="table-container">
                     <table class="shipment-table">
                         <thead>
                             <tr>
@@ -2507,11 +3049,11 @@ function appendAudit(sheet, d) {
             if (SHEETS_CONFIG.scriptUrl) {
                 btn.style.background = 'linear-gradient(135deg,#0f9d58,#0d7a46)';
                 btn.title = '✅ Đã kết nối Google Sheets';
-                btn.innerHTML = '📊 Sheets ✅';
+                btn.innerHTML = '<span class="btn-icon">📊</span><span class="btn-text">Sheets</span> ✅';
             } else {
                 btn.style.background = 'linear-gradient(135deg,#64748b,#475569)';
                 btn.title = 'Kết nối Google Sheets';
-                btn.innerHTML = '📊 Sheets';
+                btn.innerHTML = '<span class="btn-icon">📊</span><span class="btn-text">Sheets</span>';
             }
         }
         
@@ -2637,7 +3179,7 @@ function appendAudit(sheet, d) {
             showStatus(ok, msg) {
                 const el = document.getElementById('fbStatusBadge');
                 if (!el) return;
-                el.textContent = ok ? '🔥 Firebase: Đã kết nối' : '⚠️ Firebase: Chưa kết nối';
+                el.innerHTML = ok ? '<span class="btn-icon">🔥</span><span class="btn-text"> Firebase: Đã kết nối</span>' : '<span class="btn-icon">⚠️</span><span class="btn-text"> Firebase: Chưa kết nối</span>';
                 el.style.background = ok ? '#d1fae5' : '#fef3c7';
                 el.style.color      = ok ? '#065f46' : '#92400e';
                 el.style.border     = ok ? '1px solid #6ee7b7' : '1px solid #fcd34d';
@@ -5381,18 +5923,22 @@ function appendAudit(sheet, d) {
             const header = document.getElementById('stickyTop');
             const main = document.getElementById('mainContent');
             if (header && main) {
-                main.style.paddingTop = (header.offsetHeight + 16) + 'px';
+                const h = header.getBoundingClientRect().height || header.offsetHeight;
+                if (h > 20) { // only apply if header actually has height
+                    main.style.setProperty('padding-top', (h + 14) + 'px', 'important');
+                }
             }
         }
         window.addEventListener('resize', adjustMainContentPadding);
-        setTimeout(adjustMainContentPadding, 150);
-        // Also observe header size changes
-        document.addEventListener('DOMContentLoaded', () => {
+        // Run at many intervals to catch all render phases
+        [0, 50, 100, 200, 400, 800, 1500].forEach(t => setTimeout(adjustMainContentPadding, t));
+        // Observe header height changes (font load, image load, etc.)
+        if (window.ResizeObserver) {
             const hdr = document.getElementById('stickyTop');
-            if (hdr && window.ResizeObserver) {
-                new ResizeObserver(adjustMainContentPadding).observe(hdr);
-            }
-        });
+            if (hdr) new ResizeObserver(() => {
+                adjustMainContentPadding();
+            }).observe(hdr);
+        }
 
         // ================================================================
         //  ĐỒNG BỘ DỮ LIỆU TỪ GOOGLE SHEETS VỀ WEB
@@ -5535,7 +6081,7 @@ function appendAudit(sheet, d) {
                         ${!SHEETS_CONFIG.sheetId ? `
                         <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
                             <div style="font-weight:700;color:#92400e;font-size:13px;margin-bottom:4px;">⚠️ Chưa có Sheet ID</div>
-                            <div style="font-size:12px;color:#92400e;">Vào <strong>📊 Sheets</strong> để điền Sheet ID trước.</div>
+                            <div style="font-size:12px;color:#92400e;">Vào <strong><span class="btn-icon">📊</span><span class="btn-text">Sheets</span></strong> để điền Sheet ID trước.</div>
                         </div>` : ''}
 
                         <!-- Thông tin config + hướng dẫn share -->
@@ -5628,7 +6174,7 @@ function appendAudit(sheet, d) {
 
         async function doSyncFromSheets() {
             if (!SHEETS_CONFIG.sheetId) {
-                showNotification('⚠️ Chưa có Sheet ID! Vào 📊 Sheets để cấu hình.', 'error');
+                showNotification('⚠️ Chưa có Sheet ID! Vào <span class="btn-icon">📊</span><span class="btn-text">Sheets</span> để cấu hình.', 'error');
                 return;
             }
 
@@ -5775,6 +6321,218 @@ function appendAudit(sheet, d) {
 
         // Refresh exchange rate every 30 minutes
         setInterval(fetchExchangeRate, 30 * 60 * 1000);
+
+        // ========== MOBILE UX ==========
+
+        const IS_MOBILE = () => window.innerWidth <= 600;
+
+        // ── Mobile Tab Navigation ──
+        function mobSwitchTab(tab) {
+            if (!IS_MOBILE()) return;
+            // Close settings menu if open (unless tapping settings again)
+            if (tab !== 'settings') closeMobSettings();
+            // Update tab bar active states
+            ['add','summary','settings'].forEach(t => {
+                const el = document.getElementById('mobTab-' + t);
+                if (el) el.classList.toggle('active', t === tab);
+            });
+            // Show/hide sections
+            const addCard = document.querySelector('.card');  // first card = form card
+            const listCard = document.querySelectorAll('.card')[1]; // second card = list
+            const summaryBox = document.querySelector('.summary-box');
+
+            if (tab === 'add') {
+                if (addCard) { addCard.style.display = ''; addCard.scrollIntoView({behavior:'smooth',block:'start'}); }
+                if (listCard) listCard.style.display = 'none';
+            } else if (tab === 'summary') {
+                if (addCard) addCard.style.display = 'none';
+                if (listCard) { listCard.style.display = ''; }
+                if (summaryBox) summaryBox.scrollIntoView({behavior:'smooth',block:'start'});
+            } else if (tab === 'settings') {
+                // Toggle settings popup menu
+                const menu = document.getElementById('mobSettingsMenu');
+                if (menu) {
+                    if (menu.style.display === 'none' || menu.style.display === '') {
+                        menu.style.display = 'block';
+                        // Animate in
+                        menu.style.opacity = '0';
+                        menu.style.transform = 'translateY(12px)';
+                        requestAnimationFrame(() => {
+                            menu.style.transition = 'opacity 0.2s, transform 0.2s';
+                            menu.style.opacity = '1';
+                            menu.style.transform = 'translateY(0)';
+                        });
+                    } else {
+                        closeMobSettings();
+                        // If closing, deactivate settings tab, reactivate previous
+                        const el = document.getElementById('mobTab-settings');
+                        if (el) el.classList.remove('active');
+                        return;
+                    }
+                }
+            }
+        }
+
+        function closeMobSettings() {
+            const menu = document.getElementById('mobSettingsMenu');
+            if (menu && menu.style.display !== 'none') {
+                menu.style.opacity = '0';
+                menu.style.transform = 'translateY(12px)';
+                setTimeout(() => { menu.style.display = 'none'; }, 180);
+            }
+        }
+
+        // ── Mobile Card Rendering ──
+        function renderMobileCards() {
+            if (!IS_MOBILE()) return;
+            const container = document.getElementById('mobileCardList');
+            if (!container) return;
+
+            const filtered = getFilteredShipments();
+            if (filtered.length === 0) {
+                let msg = searchTerm ? 'Không tìm thấy lô hàng phù hợp' : 'Chưa có lô hàng nào';
+                container.innerHTML = `
+                    <div style="text-align:center;padding:40px 20px;color:#94a3b8;">
+                        <div style="font-size:36px;margin-bottom:12px;">📦</div>
+                        <div style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:6px;">${msg}</div>
+                        <div style="font-size:13px;">Nhấn <strong>Thêm mới</strong> để tạo lô hàng</div>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(s => {
+                const lotRate = (s.commissionRate && s.commissionRate > 0) ? s.commissionRate : (exchangeRate || 25300);
+                const profitClass = s.profit >= 0 ? 'profit-pos' : 'profit-neg';
+                const payBadge = s.paymentStatus === 'paid'
+                    ? `<span class="status-badge status-paid">✅ Đã TT</span>`
+                    : `<span class="status-badge status-pending">⏳ Chưa TT</span>`;
+                const comStatus = s.comPaymentStatus || 'com_pending';
+                const comBadge = comStatus === 'com_paid'
+                    ? `<button class="com-status-btn com-status-paid" onclick="toggleComStatus(${s.id})" style="font-size:11px;padding:3px 8px;">✅ Com đã trả</button>`
+                    : `<button class="com-status-btn com-status-pending" onclick="toggleComStatus(${s.id})" style="font-size:11px;padding:3px 8px;">⏳ Chưa trả com</button>`;
+
+                // Commission display
+                const comList = s.commissions && s.commissions.length > 0
+                    ? s.commissions
+                    : (s.commissionVND ? [{name:'',cent:s.commissionCent,vnd:s.commissionVND}] : []);
+                const totalComVND = comList.reduce((a, c) => a + (c.vnd||0), 0);
+                const comDisplay = totalComVND > 0
+                    ? `<span class="mob-card-value" style="color:#10b981;">${formatCurrency(totalComVND,'VND')}</span>`
+                    : `<span style="color:#94a3b8;font-size:12px;">—</span>`;
+
+                const mawbHtml = s.mawb ? `<span class="mob-card-mawb">${escapeHtml(s.mawb)}</span>` : '';
+                const dateStr = s.readyDate ? new Date(s.readyDate).toLocaleDateString('vi-VN') : '—';
+
+                return `
+                <div class="mob-card" id="mobcard-${s.id}">
+                    <div class="mob-card-header">
+                        <div>
+                            <div class="mob-card-company">${escapeHtml(s.company || '—')}</div>
+                            ${s.customerName ? `<div class="mob-card-customer">👤 ${escapeHtml(s.customerName)}</div>` : ''}
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <div class="mob-card-date">📅 ${dateStr}</div>
+                            ${mawbHtml}
+                        </div>
+                    </div>
+
+                    <div class="mob-info-pills">
+                        ${s.carrier ? `<span class="mob-pill">✈️ ${escapeHtml(s.carrier)}</span>` : ''}
+                        ${s.dest ? `<span class="mob-pill gold">🌏 ${escapeHtml(s.dest)}</span>` : ''}
+                        <span class="mob-pill blue">⚖️ CW: ${s.cw||0}kg</span>
+                        ${s.gw ? `<span class="mob-pill">GW: ${s.gw}kg</span>` : ''}
+                    </div>
+
+                    <div class="mob-card-body">
+                        <div class="mob-card-row">
+                            <span class="mob-card-label">Giá mua</span>
+                            <div style="text-align:right;">
+                                <span class="mob-card-value">${formatCurrency(s.purchasePrice||0)}</span>
+                                ${s.purchaseUnitPrice ? `<div style="font-size:10px;color:#94a3b8;">${formatCurrency(s.purchaseUnitPrice)}/kg</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="mob-card-row">
+                            <span class="mob-card-label">Doanh thu</span>
+                            <div style="text-align:right;">
+                                <span class="mob-card-value blue">${formatCurrency(s.sellingPrice||0)}</span>
+                                <div style="font-size:10px;color:#94a3b8;">${formatCurrency(s.sellingPrice * lotRate,'VND')}</div>
+                            </div>
+                        </div>
+                        <div class="mob-card-row">
+                            <span class="mob-card-label">🏆 Lợi nhuận</span>
+                            <div style="text-align:right;">
+                                <span class="mob-card-value ${profitClass}" style="font-size:16px;">${formatCurrency(s.profit||0)}</span>
+                                <div style="font-size:10px;color:#94a3b8;">${formatCurrency((s.profit||0) * lotRate,'VND')}</div>
+                            </div>
+                        </div>
+                        <div class="mob-card-row">
+                            <span class="mob-card-label">Hoa hồng</span>
+                            ${comDisplay}
+                        </div>
+                        ${s.commissionRate ? `
+                        <div class="mob-card-row">
+                            <span class="mob-card-label">Tỷ giá lô</span>
+                            <span class="mob-card-value" style="font-size:12px;">${new Intl.NumberFormat('vi-VN').format(s.commissionRate)}₫</span>
+                        </div>` : ''}
+                    </div>
+
+                    <div class="mob-card-footer">
+                        <div class="mob-card-badges">
+                            ${payBadge}
+                            ${comBadge}
+                        </div>
+                        <div class="mob-card-actions">
+                            <button class="mob-btn-edit" onclick="editShipment(${s.id})">✏️ Sửa</button>
+                            <button class="mob-btn-del" onclick="deleteShipment(${s.id})">🗑️</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Override renderShipments to also update mobile cards
+        const _origRenderShipments = renderShipments;
+        renderShipments = function() {
+            _origRenderShipments();
+            renderMobileCards();
+        };
+
+        // Init mobile layout on load
+        window.addEventListener('resize', () => {
+            if (IS_MOBILE()) {
+                renderMobileCards();
+            }
+        });
+
+        // Close settings menu when tapping outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('mobSettingsMenu');
+            const settingsBtn = document.getElementById('mobTab-settings');
+            if (menu && menu.style.display !== 'none') {
+                if (!menu.contains(e.target) && !settingsBtn.contains(e.target)) {
+                    closeMobSettings();
+                    if (settingsBtn) settingsBtn.classList.remove('active');
+                }
+            }
+        });
+
+        // Initial mobile render after data loads
+        setTimeout(() => {
+            if (IS_MOBILE()) {
+                renderMobileCards();
+                // Default: show list (hide form card), activate add tab
+                const cards = document.querySelectorAll('.main-content .card');
+                if (cards.length >= 1) cards[0].style.display = 'none';
+                // Set add tab as default active
+                ['add','summary','settings'].forEach(t => {
+                    const el = document.getElementById('mobTab-' + t);
+                    if (el) el.classList.toggle('active', t === 'add');
+                });
+                // Show list card (main content)
+                const listCard = document.querySelectorAll('.card')[1];
+                if (listCard) listCard.style.display = '';
+            }
+        }, 600);
     </script>
     
 </body>
