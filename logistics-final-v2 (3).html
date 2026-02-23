@@ -1395,6 +1395,7 @@
                                 <th>Company</th>
                                 <th>MAWB</th>
                                 <th>Dest</th>
+                                <th>Carrier</th>
                                 <th>CW</th>
                                 <th>Purchase</th>
                                 <th>Make</th>
@@ -1410,7 +1411,7 @@
                         </thead>
                         <tbody id="shipmentList">
                             <tr>
-                                <td colspan="16">
+                                <td colspan="17">
                                     <div class="empty-state">
                                         <h3>Chưa có lô hàng nào</h3>
                                         <p>Thêm lô hàng đầu tiên của bạn</p>
@@ -2892,7 +2893,7 @@ function appendAudit(sheet, d) {
                 
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="16">
+                        <td colspan="17">
                             <div class="empty-state">
                                 <h3>${emptyMsg}</h3>
                                 <p>${emptySubMsg}</p>
@@ -2932,6 +2933,7 @@ function appendAudit(sheet, d) {
                         </td>
                         <td>${s.mawb || '-'}</td>
                         <td>${s.dest || '-'}</td>
+                        <td>${s.carrier || '-'}</td>
                         <td><strong>${s.cw || 0}</strong></td>
                         <td>
                             ${formatCurrency(s.purchasePrice)}
