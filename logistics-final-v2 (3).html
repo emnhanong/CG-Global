@@ -1027,6 +1027,10 @@
                     style="padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;white-space:nowrap;">
                     ⚠️ Firebase: Chưa kết nối
                 </div>
+                <button id="syncSheetsBtn" onclick="showSyncFromSheetsModal()" title="Đồng bộ dữ liệu từ Google Sheets về web"
+                    style="padding:10px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#0f9d58,#0d7a46);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                    🔄 Đồng bộ Sheets
+                </button>
                 <button id="sheetsBtn" onclick="showSheetsConfigModal()" title="Kết nối Google Sheets"
                     style="padding:10px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#64748b,#475569);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
                     📊 Sheets
@@ -1998,7 +2002,73 @@
 // ============================================================
 
 function doGet(e) {
+  // Nếu có param action=getActiveShipments → trả JSON để web đồng bộ
+  if (e && e.parameter && e.parameter.action === 'getActiveShipments') {
+    try {
+      var sheetId = e.parameter.sheetId;
+      if (!sheetId) throw new Error('Missing sheetId');
+      var ss    = SpreadsheetApp.openById(sheetId);
+      var sheet = getOrCreateSheet(ss, 'data khách hàng');
+      var result = getActiveShipmentsFromSheet(sheet);
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'OK', data: result }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch(err) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'Error', message: err.message }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
   return ContentService.createTextOutput('OK').setMimeType(ContentService.MimeType.TEXT);
+}
+
+// Đọc tất cả lô hàng "DANG HOAT DONG" từ sheet
+function getActiveShipmentsFromSheet(sheet) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return [];
+  var data = sheet.getRange(2, 1, lastRow - 1, 31).getValues();
+  var results = [];
+  for (var i = 0; i < data.length; i++) {
+    var statusVal = String(data[i][28] || '').trim().toUpperCase();
+    // Chỉ lấy hàng DANG HOAT DONG (bỏ DA XOA)
+    if (statusVal === 'DA XOA') continue;
+    var cw  = parseFloat(data[i][7])  || 0;
+    var gw  = parseFloat(data[i][8])  || 0;
+    var pur = parseFloat(data[i][11]) || 0;
+    var sel = parseFloat(data[i][12]) || 0;
+    results.push({
+      id:               String(data[i][0]  || ''),
+      company:          String(data[i][1]  || ''),
+      customerName:     String(data[i][2]  || ''),
+      readyDate:        String(data[i][3]  || ''),
+      carrier:          String(data[i][4]  || ''),
+      dest:             String(data[i][5]  || ''),
+      mawb:             String(data[i][6]  || ''),
+      cw:               cw,
+      gw:               gw,
+      purchaseUnitPrice:parseFloat(data[i][9])  || 0,
+      sellingUnitPrice: parseFloat(data[i][10]) || 0,
+      purchasePrice:    pur,
+      sellingPrice:     sel,
+      makePrice:        parseFloat(data[i][13]) || 0,
+      makeUnitPrice:    cw > 0 ? (sel - pur) / cw : 0,
+      xray:             parseFloat(data[i][14]) || 0,
+      awb:              parseFloat(data[i][15]) || 0,
+      ams:              parseFloat(data[i][16]) || 0,
+      profit:           parseFloat(data[i][17]) || 0,
+      commissionVND:    parseFloat(data[i][18]) || 0,
+      commissionCent:   parseFloat(data[i][19]) || 0,
+      commissionTax:    parseFloat(data[i][20]) || 0,
+      commissionRate:   parseFloat(data[i][21]) || 0,
+      comPaymentStatus: String(data[i][22] || '').indexOf('trả com') !== -1 ? 'com_paid' : 'com_pending',
+      paymentStatus:    String(data[i][23] || '').indexOf('Đã') !== -1 ? 'paid' : 'pending',
+      customerNote:     String(data[i][24] || ''),
+      createdAt:        String(data[i][25] || new Date().toISOString()),
+      updatedAt:        String(data[i][26] || ''),
+      updatedBy:        String(data[i][27] || '')
+    });
+  }
+  return results;
 }
 
 function getOrCreateSheet(ss, targetName) {
@@ -5266,6 +5336,271 @@ function appendAudit(sheet, d) {
                 new ResizeObserver(adjustMainContentPadding).observe(hdr);
             }
         });
+
+        // ================================================================
+        //  ĐỒNG BỘ DỮ LIỆU TỪ GOOGLE SHEETS VỀ WEB
+        // ================================================================
+        function showSyncFromSheetsModal() {
+            const existing = document.getElementById('syncSheetsModal');
+            if (existing) { existing.remove(); return; }
+
+            const hasConfig = !!(SHEETS_CONFIG.scriptUrl && SHEETS_CONFIG.sheetId);
+
+            const modal = document.createElement('div');
+            modal.id = 'syncSheetsModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,0.4);">
+                    
+                    <!-- Header -->
+                    <div style="background:linear-gradient(135deg,#0f9d58,#0d7a46);padding:24px 28px;border-radius:20px 20px 0 0;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <div style="color:white;font-size:20px;font-weight:800;margin-bottom:4px;">🔄 Đồng Bộ Từ Google Sheets</div>
+                                <div style="color:rgba(255,255,255,0.8);font-size:12px;">Kéo dữ liệu "Đang hoạt động" từ sheet về web</div>
+                            </div>
+                            <button onclick="document.getElementById('syncSheetsModal').remove()"
+                                style="width:34px;height:34px;border:none;background:rgba(255,255,255,0.2);color:white;border-radius:50%;font-size:18px;cursor:pointer;">✕</button>
+                        </div>
+                    </div>
+
+                    <div style="padding:24px 28px;">
+
+                        <!-- Cảnh báo nếu chưa cấu hình -->
+                        ${!hasConfig ? `
+                        <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:12px;padding:14px 16px;margin-bottom:20px;">
+                            <div style="font-weight:700;color:#92400e;font-size:13px;margin-bottom:4px;">⚠️ Chưa cấu hình Google Sheets</div>
+                            <div style="font-size:12px;color:#92400e;">Vào <strong>📊 Sheets</strong> để cấu hình Script URL và Sheet ID trước.</div>
+                        </div>` : ''}
+
+                        <!-- Thông tin config hiện tại -->
+                        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px 16px;margin-bottom:20px;">
+                            <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px;">📋 Cấu hình hiện tại</div>
+                            <div style="font-size:11px;color:#166534;line-height:1.8;">
+                                <div>Script URL: <strong style="word-break:break-all;">${SHEETS_CONFIG.scriptUrl ? SHEETS_CONFIG.scriptUrl.substring(0,60)+'...' : '❌ Chưa có'}</strong></div>
+                                <div>Sheet ID: <strong>${SHEETS_CONFIG.sheetId || '❌ Chưa có'}</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Chế độ đồng bộ -->
+                        <div style="margin-bottom:20px;">
+                            <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px;">⚙️ Chế độ đồng bộ</div>
+                            <div style="display:flex;flex-direction:column;gap:8px;">
+                                <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:all 0.2s;"
+                                    id="modeLabel_merge" onclick="selectSyncMode('merge')">
+                                    <input type="radio" name="syncMode" value="merge" checked style="margin-top:2px;accent-color:#0f9d58;">
+                                    <div>
+                                        <div style="font-weight:700;color:#1e293b;font-size:13px;">🔀 Merge (Khuyến nghị)</div>
+                                        <div style="font-size:11px;color:#64748b;margin-top:2px;">Giữ lại dữ liệu web hiện có, chỉ thêm/cập nhật các lô từ Sheets. Không xóa gì.</div>
+                                    </div>
+                                </label>
+                                <label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:all 0.2s;"
+                                    id="modeLabel_replace" onclick="selectSyncMode('replace')">
+                                    <input type="radio" name="syncMode" value="replace" style="margin-top:2px;accent-color:#ef4444;">
+                                    <div>
+                                        <div style="font-weight:700;color:#1e293b;font-size:13px;">🔁 Thay thế hoàn toàn</div>
+                                        <div style="font-size:11px;color:#64748b;margin-top:2px;">Xóa toàn bộ dữ liệu web hiện tại, thay bằng dữ liệu từ Sheets. <span style="color:#ef4444;font-weight:600;">Không thể hoàn tác!</span></div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Kết quả preview -->
+                        <div id="syncPreview" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:12px;"></div>
+
+                        <!-- Progress -->
+                        <div id="syncProgress" style="display:none;margin-bottom:16px;">
+                            <div style="font-size:12px;color:#64748b;font-weight:600;margin-bottom:8px;" id="syncProgressText">Đang kết nối...</div>
+                            <div style="height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;">
+                                <div id="syncProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#0f9d58,#4ade80);border-radius:99px;transition:width 0.4s ease;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Kết quả -->
+                        <div id="syncResult" style="display:none;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:16px;white-space:pre-line;line-height:1.7;"></div>
+
+                        <!-- Buttons -->
+                        <div style="display:flex;gap:10px;">
+                            <button onclick="document.getElementById('syncSheetsModal').remove()"
+                                style="flex:1;padding:12px;border:2px solid #e2e8f0;background:white;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#475569;">
+                                Đóng
+                            </button>
+                            <button id="btnDoSync" onclick="doSyncFromSheets()" ${!hasConfig ? 'disabled' : ''}
+                                style="flex:2;padding:12px;border:none;background:${hasConfig ? 'linear-gradient(135deg,#0f9d58,#0d7a46)' : '#94a3b8'};color:white;border-radius:10px;font-size:14px;font-weight:700;cursor:${hasConfig ? 'pointer' : 'not-allowed'};display:flex;align-items:center;justify-content:center;gap:8px;">
+                                🔄 Bắt đầu đồng bộ
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+            // Set default border highlight
+            selectSyncMode('merge');
+        }
+
+        function selectSyncMode(mode) {
+            ['merge','replace'].forEach(m => {
+                const lbl = document.getElementById('modeLabel_' + m);
+                if (!lbl) return;
+                lbl.style.borderColor = m === mode ? (m === 'replace' ? '#ef4444' : '#0f9d58') : '#e2e8f0';
+                lbl.style.background  = m === mode ? (m === 'replace' ? '#fff5f5' : '#f0fdf4') : 'white';
+            });
+        }
+
+        async function doSyncFromSheets() {
+            if (!SHEETS_CONFIG.scriptUrl || !SHEETS_CONFIG.sheetId) {
+                showNotification('⚠️ Chưa cấu hình Google Sheets!', 'error');
+                return;
+            }
+
+            const modeEl = document.querySelector('input[name="syncMode"]:checked');
+            const mode   = modeEl ? modeEl.value : 'merge';
+
+            if (mode === 'replace') {
+                if (!confirm('⚠️ CHẾ ĐỘ THAY THẾ HOÀN TOÀN\n\nToàn bộ dữ liệu web hiện tại sẽ bị XÓA và thay bằng dữ liệu từ Sheets.\n\nBạn có chắc chắn không?')) return;
+            }
+
+            const btn      = document.getElementById('btnDoSync');
+            const progress = document.getElementById('syncProgress');
+            const progText = document.getElementById('syncProgressText');
+            const progBar  = document.getElementById('syncProgressBar');
+            const resultEl = document.getElementById('syncResult');
+            const preview  = document.getElementById('syncPreview');
+
+            // Reset UI
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Đang đồng bộ...'; }
+            if (progress) progress.style.display = 'block';
+            if (resultEl) resultEl.style.display = 'none';
+            if (preview)  preview.style.display  = 'none';
+
+            function setProgress(pct, text) {
+                if (progBar)  progBar.style.width = pct + '%';
+                if (progText) progText.textContent = text;
+            }
+
+            try {
+                setProgress(20, '🔗 Đang kết nối Google Sheets...');
+
+                // Gọi GET đến Apps Script để lấy dữ liệu
+                const url = SHEETS_CONFIG.scriptUrl
+                    + '?action=getActiveShipments&sheetId=' + encodeURIComponent(SHEETS_CONFIG.sheetId)
+                    + '&t=' + Date.now(); // cache bust
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+
+                setProgress(60, '📦 Đang xử lý dữ liệu...');
+
+                const json = await response.json();
+                if (json.status !== 'OK') throw new Error(json.message || 'Sheets trả về lỗi');
+
+                const sheetsData = json.data || [];
+                if (sheetsData.length === 0) {
+                    throw new Error('Không có lô hàng "Đang hoạt động" nào trong Sheets!');
+                }
+
+                setProgress(80, '💾 Đang cập nhật dữ liệu web...');
+
+                // Parse ID cho đúng kiểu
+                const sheetsShipments = sheetsData.map(s => ({
+                    ...s,
+                    id: isNaN(Number(s.id)) ? s.id : Number(s.id)
+                }));
+
+                let added = 0, updated = 0, kept = 0;
+
+                if (mode === 'replace') {
+                    // Thay hoàn toàn
+                    shipments = sheetsShipments;
+                    added = sheetsShipments.length;
+                } else {
+                    // Merge: dùng ID làm key
+                    const existingMap = {};
+                    shipments.forEach(s => { existingMap[String(s.id)] = s; });
+
+                    sheetsShipments.forEach(s => {
+                        const key = String(s.id);
+                        if (existingMap[key]) {
+                            // Cập nhật lô đã có, giữ lại commissions array nếu web có
+                            shipments = shipments.map(existing =>
+                                String(existing.id) === key
+                                    ? { ...s, commissions: existing.commissions || s.commissions }
+                                    : existing
+                            );
+                            updated++;
+                        } else {
+                            // Thêm lô mới từ Sheets
+                            shipments.unshift(s);
+                            added++;
+                        }
+                    });
+                    kept = shipments.length - added - updated;
+                }
+
+                setProgress(90, '🔥 Đang lưu và đồng bộ Firebase...');
+
+                // Lưu localStorage
+                saveAllShipmentsDB();
+
+                // Sync lên Firebase nếu đã kết nối
+                if (FIREBASE.connected) {
+                    await FIREBASE.setAllShipments(shipments).catch(console.error);
+                }
+
+                setProgress(100, '✅ Hoàn tất!');
+
+                // Cập nhật giao diện
+                updateDashboard();
+                renderShipments();
+
+                // Hiện kết quả
+                const summary = mode === 'replace'
+                    ? `✅ Thay thế thành công!
+📦 Tổng lô hàng từ Sheets: ${added}`
+                    : `✅ Đồng bộ thành công!
+➕ Lô mới thêm vào: ${added}
+🔄 Lô đã cập nhật: ${updated}
+📦 Lô giữ nguyên: ${kept}
+
+📊 Tổng cộng web hiện có: ${shipments.length} lô`;
+
+                if (resultEl) {
+                    resultEl.textContent = summary;
+                    resultEl.style.display = 'block';
+                    resultEl.style.background = '#d1fae5';
+                    resultEl.style.color = '#065f46';
+                    resultEl.style.border = '1px solid #6ee7b7';
+                }
+
+                // Log audit
+                logAuditAction('SYNC_FROM_SHEETS', 'Đồng bộ từ Sheets (' + mode + '): +' + added + ' cập nhật ' + updated, sheetsShipments.slice(0,3));
+
+                showNotification('✅ Đồng bộ từ Sheets thành công! +' + added + ' lô mới');
+
+            } catch (err) {
+                setProgress(0, '');
+                if (progress) progress.style.display = 'none';
+                if (resultEl) {
+                    resultEl.textContent = '❌ Lỗi đồng bộ:\n' + err.message
+                        + '\n\n💡 Kiểm tra:\n• Script URL đã deploy đúng chưa?\n• Đã cập nhật code Apps Script mới nhất chưa (có hàm getActiveShipmentsFromSheet)?\n• Sheet ID có đúng không?';
+                    resultEl.style.display = 'block';
+                    resultEl.style.background = '#fee2e2';
+                    resultEl.style.color = '#991b1b';
+                    resultEl.style.border = '1px solid #fca5a5';
+                }
+                showNotification('❌ Đồng bộ thất bại: ' + err.message, 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '🔄 Đồng bộ lại'; }
+            }
+        }
 
         // Initialize app
         init();
