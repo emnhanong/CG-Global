@@ -1257,7 +1257,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label" style="font-size: 12px;">Tỷ giá (VNĐ)</label>
-                                <input type="number" class="form-input" id="commissionRate" placeholder="25000" step="100" oninput="calculateCommission()">
+                                <input type="number" class="form-input" id="commissionRate" placeholder="25000" step="1" min="1" oninput="calculateCommission()">
                             </div>
                         </div>
                         <div class="commission-result">
@@ -1354,9 +1354,23 @@
                             <span class="summary-label">Doanh thu:</span>
                             <span class="summary-value" id="monthRevenue">$0</span>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Lợi nhuận:</span>
-                            <span class="summary-value" id="monthProfit">$0</span>
+                        <div class="summary-item" style="flex-direction:column;align-items:flex-start;gap:2px;">
+                            <div style="display:flex;justify-content:space-between;width:100%;">
+                                <span class="summary-label">Lợi nhuận:</span>
+                                <span class="summary-value" id="monthProfit">$0</span>
+                            </div>
+                            <div style="width:100%;text-align:right;">
+                                <span id="monthProfitVND" style="font-size:11px;color:#64748b;">0₫</span>
+                            </div>
+                        </div>
+                        <div class="summary-item" style="flex-direction:column;align-items:flex-start;gap:2px;">
+                            <div style="display:flex;justify-content:space-between;width:100%;">
+                                <span class="summary-label">Selling:</span>
+                                <span class="summary-value" id="monthSelling" style="color:#3b82f6;">$0</span>
+                            </div>
+                            <div style="width:100%;text-align:right;">
+                                <span id="monthSellingVND" style="font-size:11px;color:#64748b;">0₫</span>
+                            </div>
                         </div>
                         <div class="summary-item">
                             <span class="summary-label">Số lô hàng:</span>
@@ -1384,6 +1398,7 @@
                                 <th>CW</th>
                                 <th>Purchase</th>
                                 <th>Make</th>
+                                <th>Selling</th>
                                 <th>Revenue</th>
                                 <th>Profit</th>
                                 <th>Tỷ giá</th>
@@ -1395,7 +1410,7 @@
                         </thead>
                         <tbody id="shipmentList">
                             <tr>
-                                <td colspan="15">
+                                <td colspan="16">
                                     <div class="empty-state">
                                         <h3>Chưa có lô hàng nào</h3>
                                         <p>Thêm lô hàng đầu tiên của bạn</p>
@@ -2802,18 +2817,11 @@ function appendAudit(sheet, d) {
             const avgProfit = totalShipments > 0 ? totalProfit / totalShipments : 0;
             const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
 
-            // ---- Tính VND theo tỷ giá của TỪNG lô hàng (commissionRate) ----
-            // Mỗi lô dùng tỷ giá riêng của nó; nếu lô không có thì fallback về exchangeRate toàn cục
-            const getRate = s => (s.commissionRate && s.commissionRate > 0) ? s.commissionRate : exchangeRate;
-            const totalRevenueVND = statsShipments.reduce((sum, s) => sum + s.sellingPrice * getRate(s), 0);
-            const totalProfitVND  = statsShipments.reduce((sum, s) => sum + s.profit * getRate(s), 0);
-            const pendingAmountVND = pendingShipments.reduce((sum, s) => sum + s.sellingPrice * getRate(s), 0);
-
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
-            document.getElementById('totalRevenueVND').textContent = formatCurrency(totalRevenueVND, 'VND');
+            document.getElementById('totalRevenueVND').textContent = formatCurrency(totalRevenue * exchangeRate, 'VND');
             
             document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
-            document.getElementById('totalProfitVND').textContent = formatCurrency(totalProfitVND, 'VND');
+            document.getElementById('totalProfitVND').textContent = formatCurrency(totalProfit * exchangeRate, 'VND');
             
             document.getElementById('totalShipments').textContent = totalShipments;
             document.getElementById('avgProfit').textContent = 'TB: ' + formatCurrency(avgProfit) + '/lô';
@@ -2822,7 +2830,7 @@ function appendAudit(sheet, d) {
             document.getElementById('pendingPayments').textContent = pendingShipments.length + ' lô';
             document.getElementById('pendingAmount').textContent = 'Tổng nợ: ' + formatCurrency(pendingAmount);
             const pendingVNDEl = document.getElementById('pendingAmountVND');
-            if (pendingVNDEl) pendingVNDEl.textContent = formatCurrency(pendingAmountVND, 'VND');
+            if (pendingVNDEl) pendingVNDEl.textContent = formatCurrency(pendingAmount * exchangeRate, 'VND');
             
             document.getElementById('profitMargin').textContent = profitMargin.toFixed(1) + '%';
 
@@ -2838,6 +2846,13 @@ function appendAudit(sheet, d) {
             
             document.getElementById('monthRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('monthProfit').textContent = formatCurrency(totalProfit);
+            const monthProfitVNDEl = document.getElementById('monthProfitVND');
+            if (monthProfitVNDEl) monthProfitVNDEl.textContent = formatCurrency(totalProfitVND, 'VND');
+            // Tổng selling = totalRevenue (sellingPrice)
+            const monthSellingEl = document.getElementById('monthSelling');
+            const monthSellingVNDEl = document.getElementById('monthSellingVND');
+            if (monthSellingEl) monthSellingEl.textContent = formatCurrency(totalRevenue);
+            if (monthSellingVNDEl) monthSellingVNDEl.textContent = formatCurrency(totalRevenueVND, 'VND');
             document.getElementById('monthShipments').textContent = totalShipments;
             document.getElementById('monthMargin').textContent = profitMargin.toFixed(1) + '%';
         }
@@ -2877,7 +2892,7 @@ function appendAudit(sheet, d) {
                 
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="15">
+                        <td colspan="16">
                             <div class="empty-state">
                                 <h3>${emptyMsg}</h3>
                                 <p>${emptySubMsg}</p>
@@ -2929,9 +2944,19 @@ function appendAudit(sheet, d) {
                         <td style="font-weight: 700; color: #3b82f6;">
                             ${formatCurrency(s.sellingPrice)}
                             ${s.sellingUnitPrice ? `<div style="font-size: 10px; color: #94a3b8;">${formatCurrency(s.sellingUnitPrice)}/kg</div>` : ''}
+                            <div style="font-size: 10px; color: #64748b; margin-top:2px;">
+                                ${formatCurrency(s.sellingPrice * ((s.commissionRate && s.commissionRate > 0) ? s.commissionRate : exchangeRate), 'VND')}
+                            </div>
+                        </td>
+                        <td style="font-weight: 700; color: #3b82f6;">
+                            ${formatCurrency(s.sellingPrice)}
+                            ${s.sellingUnitPrice ? `<div style="font-size: 10px; color: #94a3b8;">${formatCurrency(s.sellingUnitPrice)}/kg</div>` : ''}
                         </td>
                         <td class="${s.profit >= 0 ? 'profit-positive' : 'profit-negative'}">
                             ${formatCurrency(s.profit)}
+                            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">
+                                ${formatCurrency(s.profit * ((s.commissionRate && s.commissionRate > 0) ? s.commissionRate : exchangeRate), 'VND')}
+                            </div>
                         </td>
                         <td>${rateDisplay}</td>
                         <td>${commissionDisplay}</td>
