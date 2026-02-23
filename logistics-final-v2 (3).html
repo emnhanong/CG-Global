@@ -1532,6 +1532,7 @@
         async function syncShipmentToSheets(shipmentData, action = 'ADD') {
             if (!SHEETS_CONFIG.scriptUrl) return;
             try {
+                const currentUser = getCurrentUser() || 'Unknown';
                 const payload = {
                     action: 'syncShipment',
                     operation: action,
@@ -1564,7 +1565,11 @@
                         customerNote: shipmentData.customerNote || '',
                         createdAt: shipmentData.createdAt || new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
-                        updatedBy: getCurrentUser() || 'Unknown',
+                        updatedBy: currentUser,
+                        // Thông tin xóa — chỉ có giá trị khi action = DELETE
+                        dataStatus: action === 'DELETE' ? 'ĐÃ XÓA' : 'ĐANG HOẠT ĐỘNG',
+                        deletedAt: action === 'DELETE' ? new Date().toISOString() : '',
+                        deletedBy: action === 'DELETE' ? currentUser : '',
                     }
                 };
                 // Dùng text/plain để tránh CORS preflight, Apps Script vẫn đọc được body
@@ -1865,7 +1870,8 @@ var HEADERS_SHIPMENT = [
   'X-ray rate', 'AWB (USD)', 'AMS (USD)', 'Lợi nhuận (USD)',
   'Hoa hồng (VND)', 'Commission Cent', 'Thuế com (%)', 'Tỷ giá',
   'Trạng thái com', 'Thanh toán', 'Ghi chú',
-  'Tạo lúc', 'Cập nhật lúc', 'Cập nhật bởi'
+  'Tạo lúc', 'Cập nhật lúc', 'Cập nhật bởi',
+  'Trạng thái dữ liệu', 'Xóa lúc', 'Xóa bởi'
 ];
 
 function ensureShipmentHeaders(sheet) {
@@ -1875,6 +1881,16 @@ function ensureShipmentHeaders(sheet) {
     hdr.setFontWeight('bold').setBackground('#1a1200').setFontColor('#d4af37');
     sheet.setFrozenRows(1);
     sheet.setColumnWidths(1, HEADERS_SHIPMENT.length, 130);
+  } else {
+    // Nếu sheet cũ chưa có 3 cột mới thì tự động thêm header
+    var lastCol = sheet.getLastColumn();
+    if (lastCol < HEADERS_SHIPMENT.length) {
+      var missingHeaders = HEADERS_SHIPMENT.slice(lastCol);
+      sheet.getRange(1, lastCol + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+      var hdr = sheet.getRange(1, lastCol + 1, 1, missingHeaders.length);
+      hdr.setFontWeight('bold').setBackground('#1a1200').setFontColor('#d4af37');
+      sheet.setColumnWidths(lastCol + 1, missingHeaders.length, 150);
+    }
   }
 }
 
@@ -1886,7 +1902,8 @@ function toRow(d) {
     d.xray, d.awb, d.ams, d.profit,
     d.commissionVND, d.commissionCent, d.commissionTax, d.commissionRate,
     d.comPaymentStatus, d.paymentStatus, d.customerNote,
-    d.createdAt, d.updatedAt, d.updatedBy
+    d.createdAt, d.updatedAt, d.updatedBy,
+    d.dataStatus || 'ĐANG HOẠT ĐỘNG', d.deletedAt || '', d.deletedBy || ''
   ];
 }
 
@@ -1905,20 +1922,39 @@ function handleShipment(sheet, op, d) {
   
   if (op === 'ADD') {
     sheet.appendRow(row);
+    // Tô màu xanh nhạt cho dòng mới (ĐANG HOẠT ĐỘNG)
+    var newRowNum = sheet.getLastRow();
+    sheet.getRange(newRowNum, 29, 1, 1).setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
     
   } else if (op === 'UPDATE') {
     var rowNum = findRowById(sheet, d.id);
     if (rowNum > 0) {
       sheet.getRange(rowNum, 1, 1, row.length).setValues([row]);
+      // Giữ màu xanh cho dòng đang hoạt động
+      sheet.getRange(rowNum, 29, 1, 1).setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
     } else {
       sheet.appendRow(row);
+      var newRowNum = sheet.getLastRow();
+      sheet.getRange(newRowNum, 29, 1, 1).setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
     }
     
   } else if (op === 'DELETE') {
+    // KHÔNG xóa dòng — chỉ cập nhật cột Trạng thái dữ liệu, Xóa lúc, Xóa bởi
     var rowNum = findRowById(sheet, d.id);
+    var deletedAt = '';
+    try {
+      deletedAt = new Date(d.deletedAt || new Date()).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    } catch(e) { deletedAt = d.deletedAt || new Date().toISOString(); }
+    
     if (rowNum > 0) {
-      sheet.deleteRow(rowNum);
+      // Cập nhật cột 29 = Trạng thái dữ liệu, 30 = Xóa lúc, 31 = Xóa bởi
+      sheet.getRange(rowNum, 29, 1, 3).setValues([['ĐÃ XÓA', deletedAt, d.deletedBy || d.updatedBy || 'Unknown']]);
+      // Tô đỏ nhạt toàn bộ dòng để dễ nhận biết
+      sheet.getRange(rowNum, 1, 1, HEADERS_SHIPMENT.length).setBackground('#fce4ec');
+      // Cột trạng thái tô đỏ đậm hơn, chữ đậm
+      sheet.getRange(rowNum, 29, 1, 1).setBackground('#ef9a9a').setFontColor('#b71c1c').setFontWeight('bold');
     }
+    // Nếu không tìm thấy dòng (chưa từng sync) thì bỏ qua — không làm gì
   }
 }
 
@@ -2119,7 +2155,10 @@ function appendAudit(sheet, d) {
                     customerNote: 'Dòng test - xóa sau khi confirm OK',
                     createdAt: now.toISOString(),
                     updatedAt: now.toISOString(),
-                    updatedBy: getCurrentUser() || 'test'
+                    updatedBy: getCurrentUser() || 'test',
+                    dataStatus: 'ĐANG HOẠT ĐỘNG',
+                    deletedAt: '',
+                    deletedBy: ''
                 }
             };
             
