@@ -1568,7 +1568,7 @@
                         updatedAt: new Date().toISOString(),
                         updatedBy: currentUser,
                         // 3 cột mới — chỉ có giá trị thực khi DELETE
-                        dataStatus: isDelete ? 'ĐÃ XÓA' : 'ĐANG HOẠT ĐỘNG',
+                        dataStatus: isDelete ? 'DA XOA' : 'DANG HOAT DONG',
                         deletedAt: isDelete ? new Date().toISOString() : '',
                         deletedBy: isDelete ? currentUser : '',
                     }
@@ -1798,33 +1798,24 @@
         }
         
         function getAppsScriptCode() {
-            return `// ============================================
+            return `// ============================================================
 // Google Apps Script - Connect Global Logistics
-// Phiên bản: 3.0 - Tự động nhận diện tên tab hoa/thường
-// ============================================
+// Version: 4.0 - Soft Delete (khong xoa dong, chi danh dau DA XOA)
+// ============================================================
 
 function doGet(e) {
   return ContentService.createTextOutput('OK').setMimeType(ContentService.MimeType.TEXT);
 }
 
-// Tìm sheet theo tên, không phân biệt hoa/thường
-// Hỗ trợ: 'data khách hàng', 'DATA KHÁCH HÀNG', 'Data Khách Hàng'...
 function getOrCreateSheet(ss, targetName) {
   var sheets = ss.getSheets();
   var normalTarget = targetName.toLowerCase().trim();
-  
-  // Tìm sheet có tên khớp (không phân biệt hoa/thường)
   for (var i = 0; i < sheets.length; i++) {
-    var sheetName = sheets[i].getName().toLowerCase().trim();
-    if (sheetName === normalTarget) {
+    if (sheets[i].getName().toLowerCase().trim() === normalTarget) {
       return sheets[i];
     }
   }
-  
-  // Không tìm thấy → tạo mới với tên gốc (uppercase đầu mỗi từ)
-  // Nhưng ưu tiên dùng tên đã có trong sheet (thường là UPPERCASE)
-  // Tạo với tên như trong file của user
-  var newName = targetName === 'data khách hàng' ? 'DATA KHÁCH HÀNG' : 'LỊCH SỬ THAO TÁC';
+  var newName = (targetName.indexOf('data') !== -1) ? 'DATA KHACH HANG' : 'LICH SU THAO TAC';
   return ss.insertSheet(newName);
 }
 
@@ -1833,45 +1824,43 @@ function doPost(e) {
     var raw = e.postData.contents;
     if (!raw) throw new Error('Empty body');
     var data = JSON.parse(raw);
-    
     if (!data.sheetId) throw new Error('Missing sheetId');
     var ss = SpreadsheetApp.openById(data.sheetId);
-    
+
     if (data.action === 'syncShipment') {
-      var sheet = getOrCreateSheet(ss, 'data khách hàng');
+      var sheet = getOrCreateSheet(ss, 'data kh\\u00e1ch h\\u00e0ng');
       handleShipment(sheet, data.operation, data.data);
-      
     } else if (data.action === 'logAudit') {
-      var sheet = getOrCreateSheet(ss, 'lịch sử thao tác');
+      var sheet = getOrCreateSheet(ss, 'l\\u1ecbch s\\u1eed thao t\\u00e1c');
       appendAudit(sheet, data.data);
     }
-    
-    return ContentService.createTextOutput(JSON.stringify({ status: 'OK', action: data.action }))
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'OK', action: data.action }))
       .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch(err) {
-    // Ghi log lỗi vào sheet "ERRORS" để debug
+
+  } catch (err) {
     try {
       var ss2 = SpreadsheetApp.openById(JSON.parse(e.postData.contents).sheetId);
       var errSheet = ss2.getSheetByName('ERRORS') || ss2.insertSheet('ERRORS');
       errSheet.appendRow([new Date().toISOString(), err.message, e.postData.contents.substring(0, 200)]);
-    } catch(e2) {}
-    
-    return ContentService.createTextOutput(JSON.stringify({ status: 'Error', message: err.message }))
+    } catch (e2) {}
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'Error', message: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// ========== SHEET: DATA KHÁCH HÀNG ==========
+// ===== SHEET: DATA KHACH HANG (31 cot) =====
 var HEADERS_SHIPMENT = [
-  'ID', 'Công ty', 'Tên khách hàng', 'Ngày ready', 'Hãng bay', 'Điểm đến', 'MAWB',
-  'CW (kg)', 'GW (kg)', 'Giá mua/kg (USD)', 'Giá bán/kg (USD)',
-  'Tổng mua (USD)', 'Tổng bán (USD)', 'Make (USD)',
-  'X-ray rate', 'AWB (USD)', 'AMS (USD)', 'Lợi nhuận (USD)',
-  'Hoa hồng (VND)', 'Commission Cent', 'Thuế com (%)', 'Tỷ giá',
-  'Trạng thái com', 'Thanh toán', 'Ghi chú',
-  'Tạo lúc', 'Cập nhật lúc', 'Cập nhật bởi',
-  'Trạng thái dữ liệu', 'Xóa lúc', 'Xóa bởi'
+  'ID', 'Cong ty', 'Ten khach hang', 'Ngay ready', 'Hang bay', 'Diem den', 'MAWB',
+  'CW (kg)', 'GW (kg)', 'Gia mua/kg (USD)', 'Gia ban/kg (USD)',
+  'Tong mua (USD)', 'Tong ban (USD)', 'Make (USD)',
+  'X-ray rate', 'AWB (USD)', 'AMS (USD)', 'Loi nhuan (USD)',
+  'Hoa hong (VND)', 'Commission Cent', 'Thue com (%)', 'Ty gia',
+  'Trang thai com', 'Thanh toan', 'Ghi chu',
+  'Tao luc', 'Cap nhat luc', 'Cap nhat boi',
+  'Trang thai du lieu', 'Xoa luc', 'Xoa boi'
 ];
 
 function ensureShipmentHeaders(sheet) {
@@ -1881,8 +1870,10 @@ function ensureShipmentHeaders(sheet) {
     hdr.setFontWeight('bold').setBackground('#1a1200').setFontColor('#d4af37');
     sheet.setFrozenRows(1);
     sheet.setColumnWidths(1, HEADERS_SHIPMENT.length, 130);
+    sheet.setColumnWidth(29, 160);
+    sheet.setColumnWidth(30, 160);
+    sheet.setColumnWidth(31, 130);
   } else {
-    // Sheet đã tồn tại — kiểm tra có đủ cột mới chưa, nếu thiếu thì tự thêm header
     var lastCol = sheet.getLastColumn();
     if (lastCol < HEADERS_SHIPMENT.length) {
       var missingHeaders = HEADERS_SHIPMENT.slice(lastCol);
@@ -1896,14 +1887,15 @@ function ensureShipmentHeaders(sheet) {
 
 function toRow(d) {
   return [
-    String(d.id), d.company, d.customerName, d.readyDate, d.carrier, d.dest, d.mawb,
-    d.cw, d.gw, d.purchaseUnitPrice, d.sellingUnitPrice,
-    d.purchasePrice, d.sellingPrice, d.makePrice,
-    d.xray, d.awb, d.ams, d.profit,
-    d.commissionVND, d.commissionCent, d.commissionTax, d.commissionRate,
-    d.comPaymentStatus, d.paymentStatus, d.customerNote,
-    d.createdAt, d.updatedAt, d.updatedBy,
-    d.dataStatus || 'ĐANG HOẠT ĐỘNG', d.deletedAt || '', d.deletedBy || ''
+    String(d.id), d.company || '', d.customerName || '', d.readyDate || '',
+    d.carrier || '', d.dest || '', d.mawb || '',
+    d.cw || 0, d.gw || 0, d.purchaseUnitPrice || 0, d.sellingUnitPrice || 0,
+    d.purchasePrice || 0, d.sellingPrice || 0, d.makePrice || 0,
+    d.xray || 0, d.awb || 0, d.ams || 0, d.profit || 0,
+    d.commissionVND || 0, d.commissionCent || 0, d.commissionTax || 0, d.commissionRate || 0,
+    d.comPaymentStatus || '', d.paymentStatus || '', d.customerNote || '',
+    d.createdAt || '', d.updatedAt || '', d.updatedBy || '',
+    d.dataStatus || 'DANG HOAT DONG', d.deletedAt || '', d.deletedBy || ''
   ];
 }
 
@@ -1911,7 +1903,7 @@ function findRowById(sheet, id) {
   if (sheet.getLastRow() <= 1) return -1;
   var vals = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
   for (var i = 0; i < vals.length; i++) {
-    if (String(vals[i][0]) === String(id)) return i + 2; // 1-based
+    if (String(vals[i][0]) === String(id)) return i + 2;
   }
   return -1;
 }
@@ -1919,63 +1911,46 @@ function findRowById(sheet, id) {
 function handleShipment(sheet, op, d) {
   ensureShipmentHeaders(sheet);
   var row = toRow(d);
-  
+
   if (op === 'ADD') {
     sheet.appendRow(row);
-    // Tô xanh lá cột "Trạng thái dữ liệu" (cột 29)
-    var newRowNum = sheet.getLastRow();
-    sheet.getRange(newRowNum, 29, 1, 1)
-      .setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
-    
+    var nr = sheet.getLastRow();
+    sheet.getRange(nr, 29, 1, 1).setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
+
   } else if (op === 'UPDATE') {
     var rowNum = findRowById(sheet, d.id);
     if (rowNum > 0) {
       sheet.getRange(rowNum, 1, 1, row.length).setValues([row]);
-      // Giữ màu xanh cho dòng đang hoạt động
-      sheet.getRange(rowNum, 29, 1, 1)
-        .setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
+      sheet.getRange(rowNum, 29, 1, 1).setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
     } else {
       sheet.appendRow(row);
-      var newRowNum = sheet.getLastRow();
-      sheet.getRange(newRowNum, 29, 1, 1)
-        .setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
+      var nr = sheet.getLastRow();
+      sheet.getRange(nr, 29, 1, 1).setBackground('#e8f5e9').setFontColor('#1b5e20').setFontWeight('bold');
     }
-    
+
   } else if (op === 'DELETE') {
-    // ⚠️ KHÔNG xóa dòng — chỉ đánh dấu "ĐÃ XÓA" để giữ lại vết dữ liệu
+    // KHONG XOA DONG - chi cap nhat 3 cot trang thai de giu vet du lieu
     var rowNum = findRowById(sheet, d.id);
     if (rowNum > 0) {
-      // Format thời gian xóa sang giờ VN
       var deletedAtStr = '';
       try {
-        deletedAtStr = new Date(d.deletedAt || new Date())
-          .toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-      } catch(e) {
+        deletedAtStr = new Date(d.deletedAt || new Date()).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      } catch (ex) {
         deletedAtStr = d.deletedAt || new Date().toISOString();
       }
       var deletedBy = d.deletedBy || d.updatedBy || 'Unknown';
-      
-      // Cập nhật 3 cột: Trạng thái dữ liệu (29), Xóa lúc (30), Xóa bởi (31)
-      sheet.getRange(rowNum, 29, 1, 3)
-        .setValues([['ĐÃ XÓA', deletedAtStr, deletedBy]]);
-      
-      // Tô đỏ nhạt toàn bộ dòng để nhận ra ngay
-      sheet.getRange(rowNum, 1, 1, HEADERS_SHIPMENT.length)
-        .setBackground('#fce4ec');
-      
-      // Cột trạng thái tô đỏ đậm hơn + chữ đậm
-      sheet.getRange(rowNum, 29, 1, 1)
-        .setBackground('#ef9a9a').setFontColor('#b71c1c').setFontWeight('bold');
+      sheet.getRange(rowNum, 29, 1, 3).setValues([['DA XOA', deletedAtStr, deletedBy]]);
+      sheet.getRange(rowNum, 1, 1, HEADERS_SHIPMENT.length).setBackground('#fce4ec');
+      sheet.getRange(rowNum, 29, 1, 1).setBackground('#ef9a9a').setFontColor('#b71c1c').setFontWeight('bold');
     }
-    // Nếu không tìm thấy dòng (chưa sync lần nào) → bỏ qua, không làm gì
   }
 }
 
-// ========== SHEET: LỊCH SỬ THAO TÁC ==========
+// ===== SHEET: LICH SU THAO TAC =====
 var HEADERS_AUDIT = [
-  'Thời gian', 'Người dùng', 'Loại thao tác', 'Mô tả',
-  'Số lô', 'ID lô', 'Tên công ty',
-  'Dữ liệu cũ', 'Dữ liệu mới'
+  'Thoi gian', 'Nguoi dung', 'Loai thao tac', 'Mo ta',
+  'So lo', 'ID lo', 'Ten cong ty',
+  'Du lieu cu', 'Du lieu moi'
 ];
 
 function ensureAuditHeaders(sheet) {
@@ -1993,21 +1968,18 @@ function appendAudit(sheet, d) {
   var ts = '';
   try {
     ts = new Date(d.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-  } catch(e) { ts = d.timestamp || ''; }
-  
+  } catch (e) { ts = d.timestamp || ''; }
+
   var newRow = sheet.getLastRow() + 1;
   sheet.appendRow([
     ts, d.user, d.actionType, d.description,
     d.recordCount, d.affectedIds, d.affectedCompanies,
     d.oldData, d.newData
   ]);
-  
-  // Wrap text cho cột Dữ liệu cũ (H) và Dữ liệu mới (I)
   sheet.getRange(newRow, 8, 1, 2).setWrap(true).setVerticalAlignment('top');
-  // Set chiều cao hàng tự động
   sheet.setRowHeight(newRow, 21 * (Math.max(
-    (d.oldData || '').split('\n').length,
-    (d.newData || '').split('\n').length,
+    (d.oldData || '').split('\\n').length,
+    (d.newData || '').split('\\n').length,
     1
   ) + 1));
 }`;
@@ -2830,11 +2802,18 @@ function appendAudit(sheet, d) {
             const avgProfit = totalShipments > 0 ? totalProfit / totalShipments : 0;
             const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
 
+            // ---- Tính VND theo tỷ giá của TỪNG lô hàng (commissionRate) ----
+            // Mỗi lô dùng tỷ giá riêng của nó; nếu lô không có thì fallback về exchangeRate toàn cục
+            const getRate = s => (s.commissionRate && s.commissionRate > 0) ? s.commissionRate : exchangeRate;
+            const totalRevenueVND = statsShipments.reduce((sum, s) => sum + s.sellingPrice * getRate(s), 0);
+            const totalProfitVND  = statsShipments.reduce((sum, s) => sum + s.profit * getRate(s), 0);
+            const pendingAmountVND = pendingShipments.reduce((sum, s) => sum + s.sellingPrice * getRate(s), 0);
+
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
-            document.getElementById('totalRevenueVND').textContent = formatCurrency(totalRevenue * exchangeRate, 'VND');
+            document.getElementById('totalRevenueVND').textContent = formatCurrency(totalRevenueVND, 'VND');
             
             document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
-            document.getElementById('totalProfitVND').textContent = formatCurrency(totalProfit * exchangeRate, 'VND');
+            document.getElementById('totalProfitVND').textContent = formatCurrency(totalProfitVND, 'VND');
             
             document.getElementById('totalShipments').textContent = totalShipments;
             document.getElementById('avgProfit').textContent = 'TB: ' + formatCurrency(avgProfit) + '/lô';
@@ -2843,7 +2822,7 @@ function appendAudit(sheet, d) {
             document.getElementById('pendingPayments').textContent = pendingShipments.length + ' lô';
             document.getElementById('pendingAmount').textContent = 'Tổng nợ: ' + formatCurrency(pendingAmount);
             const pendingVNDEl = document.getElementById('pendingAmountVND');
-            if (pendingVNDEl) pendingVNDEl.textContent = formatCurrency(pendingAmount * exchangeRate, 'VND');
+            if (pendingVNDEl) pendingVNDEl.textContent = formatCurrency(pendingAmountVND, 'VND');
             
             document.getElementById('profitMargin').textContent = profitMargin.toFixed(1) + '%';
 
