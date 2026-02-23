@@ -3354,28 +3354,32 @@ function appendAudit(sheet, d) {
             const totalShipments = statsShipments.length;
             // Chưa thanh toán: số lô + TỔNG TIỀN NỢ
             const pendingShipments = statsShipments.filter(s => s.paymentStatus === 'pending');
-            const pendingAmount    = pendingShipments.reduce((sum, s) => sum + s.sellingPrice, 0);
             const avgProfit = totalShipments > 0 ? totalProfit / totalShipments : 0;
             const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
 
+            // Hàm lấy tỷ giá của từng lô: dùng commissionRate của lô đó, fallback về exchangeRate global
+            const getLotRate = s => (s.commissionRate && s.commissionRate > 0) ? s.commissionRate : (exchangeRate || 25300);
+
+            // Tính VND theo tỷ giá riêng của từng lô, rồi cộng tổng
+            const totalRevenueVND = statsShipments.reduce((sum, s) => sum + s.sellingPrice * getLotRate(s), 0);
+            const totalProfitVND  = statsShipments.reduce((sum, s) => sum + s.profit       * getLotRate(s), 0);
+
+            // Công nợ VND: mỗi lô chưa TT cũng dùng tỷ giá riêng của lô đó
+            const pendingAmount    = pendingShipments.reduce((sum, s) => sum + s.sellingPrice, 0);
+            const pendingAmountVNDCalc = pendingShipments.reduce((sum, s) => sum + s.sellingPrice * getLotRate(s), 0);
+
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
-            document.getElementById('totalRevenueVND').textContent = formatCurrency(totalRevenue * exchangeRate, 'VND');
+            document.getElementById('totalRevenueVND').textContent = formatCurrency(totalRevenueVND, 'VND');
             
             document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
-            document.getElementById('totalProfitVND').textContent = formatCurrency(totalProfit * exchangeRate, 'VND');
+            document.getElementById('totalProfitVND').textContent = formatCurrency(totalProfitVND, 'VND');
             
             document.getElementById('totalShipments').textContent = totalShipments;
             document.getElementById('avgProfit').textContent = 'TB: ' + formatCurrency(avgProfit) + '/lô';
             
             // Pending: SỐ LÔ chưa thanh toán là số chính, TỔNG NỢ là phụ
             document.getElementById('pendingPayments').textContent = pendingShipments.length + ' lô';
-            // Bug fix: HTML đã có "Tổng nợ: " cố định, không cần thêm lại trong JS
             document.getElementById('pendingAmount').textContent = formatCurrency(pendingAmount);
-            // Bug fix: dùng commissionRate riêng của từng lô thay vì exchangeRate global
-            const pendingAmountVNDCalc = pendingShipments.reduce((sum, s) => {
-                const rate = (s.commissionRate && s.commissionRate > 0) ? s.commissionRate : exchangeRate;
-                return sum + (s.sellingPrice * rate);
-            }, 0);
             const pendingVNDEl = document.getElementById('pendingAmountVND');
             if (pendingVNDEl) pendingVNDEl.textContent = formatCurrency(pendingAmountVNDCalc, 'VND');
             
