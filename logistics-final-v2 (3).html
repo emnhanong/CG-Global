@@ -3285,9 +3285,15 @@ function appendAudit(sheet, d) {
             
             // Pending: SỐ LÔ chưa thanh toán là số chính, TỔNG NỢ là phụ
             document.getElementById('pendingPayments').textContent = pendingShipments.length + ' lô';
-            document.getElementById('pendingAmount').textContent = 'Tổng nợ: ' + formatCurrency(pendingAmount);
+            // Bug fix: HTML đã có "Tổng nợ: " cố định, không cần thêm lại trong JS
+            document.getElementById('pendingAmount').textContent = formatCurrency(pendingAmount);
+            // Bug fix: dùng commissionRate riêng của từng lô thay vì exchangeRate global
+            const pendingAmountVNDCalc = pendingShipments.reduce((sum, s) => {
+                const rate = (s.commissionRate && s.commissionRate > 0) ? s.commissionRate : exchangeRate;
+                return sum + (s.sellingPrice * rate);
+            }, 0);
             const pendingVNDEl = document.getElementById('pendingAmountVND');
-            if (pendingVNDEl) pendingVNDEl.textContent = formatCurrency(pendingAmount * exchangeRate, 'VND');
+            if (pendingVNDEl) pendingVNDEl.textContent = formatCurrency(pendingAmountVNDCalc, 'VND');
             
             document.getElementById('profitMargin').textContent = profitMargin.toFixed(1) + '%';
 
