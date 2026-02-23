@@ -1008,7 +1008,7 @@
                 <div class="exchange-rate">
                     <div class="exchange-rate-label" style="color:#1a1200;font-weight:600;">💱 Tỷ giá USD/VND</div>
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <input type="number" id="exchangeRateInput" value="25300" step="100"
+                        <input type="number" id="exchangeRateInput" step="100"
                             style="width:130px;font-size:22px;font-weight:800;background:rgba(0,0,0,0.2);border:2px solid rgba(26,18,0,0.4);border-radius:8px;padding:4px 8px;color:#1a1200;text-align:right;outline:none;"
                             oninput="updateExchangeRate(this.value)">
                         <span style="font-size:18px;font-weight:700;color:#1a1200;">₫</span>
@@ -1537,8 +1537,9 @@
             const v = parseFloat(val);
             if (!isNaN(v) && v > 1000) {
                 exchangeRate = v;
-                // Lưu tỷ giá do user chỉnh vào localStorage để giữ sau khi refresh
-                localStorage.setItem('lg_exchange_rate', v);
+                // Lưu tỷ giá vào localStorage (2 key để đảm bảo persist)
+                localStorage.setItem('lg_exchange_rate', String(v));
+                localStorage.setItem('lg_exchange_rate_backup', String(v));
                 document.getElementById('commissionRate').value = v;
                 calculateCommission();
                 updateDashboard();
@@ -2518,8 +2519,11 @@ function appendAudit(sheet, d) {
         }
 
 
-        // Load tỷ giá đã lưu từ localStorage, fallback về 25300 nếu chưa có
-        let exchangeRate = parseFloat(localStorage.getItem('lg_exchange_rate')) || 25300;
+        // Load tỷ giá đã lưu từ localStorage (thử 2 key, fallback về 25300)
+        const _savedRate = parseFloat(localStorage.getItem('lg_exchange_rate')) 
+                        || parseFloat(localStorage.getItem('lg_exchange_rate_backup')) 
+                        || 0;
+        let exchangeRate = (_savedRate > 1000) ? _savedRate : 25300;
         // Dashboard period filter (independent from table filter)
         let dashPeriodMode = 'all'; // 'all'|'month'|'quarter'|'year'
         let dashPeriodValue = 'all'; // concrete value
@@ -5318,7 +5322,7 @@ function appendAudit(sheet, d) {
                 if (usdRate) {
                     const vcbRate = parseFloat(usdRate.textContent.replace(/,/g, ''));
                     // Chỉ cập nhật nếu user CHƯA tự chỉnh tỷ giá (không có lg_exchange_rate trong localStorage)
-                    const userSavedRate = localStorage.getItem('lg_exchange_rate');
+                    const userSavedRate = localStorage.getItem('lg_exchange_rate') || localStorage.getItem('lg_exchange_rate_backup');
                     if (!userSavedRate) {
                         exchangeRate = vcbRate;
                         const inputEl = document.getElementById('exchangeRateInput');
