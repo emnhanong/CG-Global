@@ -1733,17 +1733,36 @@
         function getAppsScriptCode() {
             return `// ============================================
 // Google Apps Script - Connect Global Logistics
-// Phiên bản: 2.0 - Hỗ trợ text/plain để tránh CORS
+// Phiên bản: 3.0 - Tự động nhận diện tên tab hoa/thường
 // ============================================
 
 function doGet(e) {
-  // Hỗ trợ CORS preflight
   return ContentService.createTextOutput('OK').setMimeType(ContentService.MimeType.TEXT);
+}
+
+// Tìm sheet theo tên, không phân biệt hoa/thường
+// Hỗ trợ: 'data khách hàng', 'DATA KHÁCH HÀNG', 'Data Khách Hàng'...
+function getOrCreateSheet(ss, targetName) {
+  var sheets = ss.getSheets();
+  var normalTarget = targetName.toLowerCase().trim();
+  
+  // Tìm sheet có tên khớp (không phân biệt hoa/thường)
+  for (var i = 0; i < sheets.length; i++) {
+    var sheetName = sheets[i].getName().toLowerCase().trim();
+    if (sheetName === normalTarget) {
+      return sheets[i];
+    }
+  }
+  
+  // Không tìm thấy → tạo mới với tên gốc (uppercase đầu mỗi từ)
+  // Nhưng ưu tiên dùng tên đã có trong sheet (thường là UPPERCASE)
+  // Tạo với tên như trong file của user
+  var newName = targetName === 'data khách hàng' ? 'DATA KHÁCH HÀNG' : 'LỊCH SỬ THAO TÁC';
+  return ss.insertSheet(newName);
 }
 
 function doPost(e) {
   try {
-    // Đọc body - hỗ trợ cả application/json và text/plain
     var raw = e.postData.contents;
     if (!raw) throw new Error('Empty body');
     var data = JSON.parse(raw);
@@ -1752,32 +1771,31 @@ function doPost(e) {
     var ss = SpreadsheetApp.openById(data.sheetId);
     
     if (data.action === 'syncShipment') {
-      var sheet = ss.getSheetByName('data khách hàng');
-      if (!sheet) {
-        sheet = ss.insertSheet('data khách hàng');
-      }
+      var sheet = getOrCreateSheet(ss, 'data khách hàng');
       handleShipment(sheet, data.operation, data.data);
       
     } else if (data.action === 'logAudit') {
-      var sheet = ss.getSheetByName('lịch sử thao tác');
-      if (!sheet) {
-        sheet = ss.insertSheet('lịch sử thao tác');
-      }
+      var sheet = getOrCreateSheet(ss, 'lịch sử thao tác');
       appendAudit(sheet, data.data);
     }
     
-    var result = JSON.stringify({ status: 'OK', action: data.action });
-    return ContentService.createTextOutput(result)
+    return ContentService.createTextOutput(JSON.stringify({ status: 'OK', action: data.action }))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch(err) {
-    var errMsg = JSON.stringify({ status: 'Error', message: err.message });
-    return ContentService.createTextOutput(errMsg)
+    // Ghi log lỗi vào sheet "ERRORS" để debug
+    try {
+      var ss2 = SpreadsheetApp.openById(JSON.parse(e.postData.contents).sheetId);
+      var errSheet = ss2.getSheetByName('ERRORS') || ss2.insertSheet('ERRORS');
+      errSheet.appendRow([new Date().toISOString(), err.message, e.postData.contents.substring(0, 200)]);
+    } catch(e2) {}
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: 'Error', message: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// ========== SHEET: data khách hàng ==========
+// ========== SHEET: DATA KHÁCH HÀNG ==========
 var HEADERS_SHIPMENT = [
   'ID', 'Công ty', 'Tên khách hàng', 'Ngày ready', 'Hãng bay', 'Điểm đến', 'MAWB',
   'CW (kg)', 'GW (kg)', 'Giá mua/kg (USD)', 'Giá bán/kg (USD)',
@@ -1794,7 +1812,7 @@ function ensureShipmentHeaders(sheet) {
     var hdr = sheet.getRange(1, 1, 1, HEADERS_SHIPMENT.length);
     hdr.setFontWeight('bold').setBackground('#1a1200').setFontColor('#d4af37');
     sheet.setFrozenRows(1);
-    sheet.setColumnWidths(1, HEADERS_SHIPMENT.length, 120);
+    sheet.setColumnWidths(1, HEADERS_SHIPMENT.length, 130);
   }
 }
 
@@ -1811,9 +1829,10 @@ function toRow(d) {
 }
 
 function findRowById(sheet, id) {
-  var vals = sheet.getDataRange().getValues();
-  for (var i = 1; i < vals.length; i++) {
-    if (String(vals[i][0]) === String(id)) return i + 1; // 1-based row number
+  if (sheet.getLastRow() <= 1) return -1;
+  var vals = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]) === String(id)) return i + 2; // 1-based
   }
   return -1;
 }
@@ -1830,7 +1849,7 @@ function handleShipment(sheet, op, d) {
     if (rowNum > 0) {
       sheet.getRange(rowNum, 1, 1, row.length).setValues([row]);
     } else {
-      sheet.appendRow(row); // Nếu không tìm thấy, thêm mới
+      sheet.appendRow(row);
     }
     
   } else if (op === 'DELETE') {
@@ -1841,11 +1860,11 @@ function handleShipment(sheet, op, d) {
   }
 }
 
-// ========== SHEET: lịch sử thao tác ==========
+// ========== SHEET: LỊCH SỬ THAO TÁC ==========
 var HEADERS_AUDIT = [
   'Thời gian', 'Người dùng', 'Loại thao tác', 'Mô tả',
-  'Số lô ảnh hưởng', 'ID lô', 'Tên công ty',
-  'Dữ liệu cũ (JSON)', 'Dữ liệu mới (JSON)'
+  'Số lô', 'ID lô', 'Tên công ty',
+  'Dữ liệu cũ', 'Dữ liệu mới'
 ];
 
 function ensureAuditHeaders(sheet) {
@@ -1862,10 +1881,9 @@ function appendAudit(sheet, d) {
   ensureAuditHeaders(sheet);
   var ts = '';
   try {
-    ts = d.timestamp ? new Date(d.timestamp).toLocaleString('vi-VN', {timeZone: 'Asia/Ho_Chi_Minh'}) : '';
-  } catch(e) {
-    ts = d.timestamp || '';
-  }
+    ts = new Date(d.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+  } catch(e) { ts = d.timestamp || ''; }
+  
   sheet.appendRow([
     ts, d.user, d.actionType, d.description,
     d.recordCount, d.affectedIds, d.affectedCompanies,
