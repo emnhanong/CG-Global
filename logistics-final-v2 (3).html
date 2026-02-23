@@ -3844,6 +3844,11 @@ function appendAudit(sheet, d) {
             const affectedShipments = shipments.filter(s => ids.includes(s.id));
             logAuditAction('BULK_EDIT_RATE', `Sửa tỷ giá hàng loạt ${updatedCount} lô → ${new Intl.NumberFormat('vi-VN').format(newRate)}₫`, affectedShipments);
             
+            // Sync lên Firebase (quan trọng: không sync = refresh sẽ mất dữ liệu)
+            if (FIREBASE.connected) {
+                affectedShipments.forEach(s => FIREBASE.setShipment(s).catch(console.error));
+            }
+            
             // Sync to Google Sheets
             affectedShipments.forEach(s => syncShipmentToSheets(s, 'UPDATE'));
             logAuditToSheets('BULK_EDIT_RATE', `Sửa tỷ giá hàng loạt ${updatedCount} lô → ${new Intl.NumberFormat('vi-VN').format(newRate)}₫`, affectedShipments);
@@ -5689,7 +5694,12 @@ function appendAudit(sheet, d) {
                             // Cập nhật lô đã có, giữ lại commissions array nếu web có
                             shipments = shipments.map(existing =>
                                 String(existing.id) === key
-                                    ? { ...s, commissions: existing.commissions || s.commissions }
+                                    // Giữ lại các field đã sửa local (commissionRate, commissions, comPaymentStatus)
+                                    ? { ...s, 
+                                        commissionRate: existing.commissionRate || s.commissionRate,
+                                        commissions: existing.commissions || s.commissions,
+                                        comPaymentStatus: existing.comPaymentStatus || s.comPaymentStatus
+                                      }
                                     : existing
                             );
                             updated++;
