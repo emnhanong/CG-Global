@@ -1537,6 +1537,8 @@
             const v = parseFloat(val);
             if (!isNaN(v) && v > 1000) {
                 exchangeRate = v;
+                // Lưu tỷ giá do user chỉnh vào localStorage để giữ sau khi refresh
+                localStorage.setItem('lg_exchange_rate', v);
                 document.getElementById('commissionRate').value = v;
                 calculateCommission();
                 updateDashboard();
@@ -2516,7 +2518,8 @@ function appendAudit(sheet, d) {
         }
 
 
-        let exchangeRate = 25300;
+        // Load tỷ giá đã lưu từ localStorage, fallback về 25300 nếu chưa có
+        let exchangeRate = parseFloat(localStorage.getItem('lg_exchange_rate')) || 25300;
         // Dashboard period filter (independent from table filter)
         let dashPeriodMode = 'all'; // 'all'|'month'|'quarter'|'year'
         let dashPeriodValue = 'all'; // concrete value
@@ -2775,6 +2778,9 @@ function appendAudit(sheet, d) {
             document.getElementById('xray').value = 0.017;
             
             // Set default commission rate and tax
+            // Cập nhật ô hiển thị tỷ giá với giá trị đã lưu
+            const savedRateEl = document.getElementById('exchangeRateInput');
+            if (savedRateEl) savedRateEl.value = exchangeRate;
             document.getElementById('commissionRate').value = exchangeRate;
             document.getElementById('commissionTax').value = 20;
             // Initialize empty commission rows
@@ -5310,21 +5316,28 @@ function appendAudit(sheet, d) {
                 const usdRate = xml.querySelector('Exrate[CurrencyCode="USD"] Sell');
                 
                 if (usdRate) {
-                    exchangeRate = parseFloat(usdRate.textContent.replace(/,/g, ''));
-                    const inputEl = document.getElementById('exchangeRateInput');
-                    if (inputEl) inputEl.value = exchangeRate;
-                    document.getElementById('exchangeUpdate').textContent = `VCB - Cập nhật: ${new Date().toLocaleTimeString('vi-VN')}`;
-                    
-                    // Update any commission rows that still have default/old rate
-                    commissionRows.forEach(r => {
-                        if (!r.rate || r.rate === 25300) {
-                            r.rate = exchangeRate;
-                        }
-                    });
-                    renderCommissionRows();
-                    recalcAllCommissions();
-                    
-                    updateDashboard();
+                    const vcbRate = parseFloat(usdRate.textContent.replace(/,/g, ''));
+                    // Chỉ cập nhật nếu user CHƯA tự chỉnh tỷ giá (không có lg_exchange_rate trong localStorage)
+                    const userSavedRate = localStorage.getItem('lg_exchange_rate');
+                    if (!userSavedRate) {
+                        exchangeRate = vcbRate;
+                        const inputEl = document.getElementById('exchangeRateInput');
+                        if (inputEl) inputEl.value = exchangeRate;
+                        document.getElementById('exchangeUpdate').textContent = `VCB - Cập nhật: ${new Date().toLocaleTimeString('vi-VN')}`;
+                        
+                        // Update any commission rows that still have default/old rate
+                        commissionRows.forEach(r => {
+                            if (!r.rate || r.rate === 25300) {
+                                r.rate = exchangeRate;
+                            }
+                        });
+                        renderCommissionRows();
+                        recalcAllCommissions();
+                        updateDashboard();
+                    } else {
+                        // User đã tự chỉnh: chỉ hiện label nhưng không ghi đè
+                        document.getElementById('exchangeUpdate').textContent = `VCB: ${new Intl.NumberFormat('vi-VN').format(vcbRate)}₫ (đang dùng tỷ giá tùy chỉnh)`;
+                    }
                 }
             } catch (error) {
                 console.log('Using default rate:', exchangeRate);
