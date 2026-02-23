@@ -8,6 +8,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Quản Lý Logistics - Doanh Thu & Lợi Nhuận</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -1019,6 +1022,11 @@
                         <div style="font-size:11px;color:rgba(212,175,55,0.7);">Đăng xuất ↗</div>
                     </div>
                 </div>
+                <!-- Firebase status badge -->
+                <div id="fbStatusBadge" onclick="showFirebaseConfigModal()" title="Cấu hình Firebase"
+                    style="padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;white-space:nowrap;">
+                    ⚠️ Firebase: Chưa kết nối
+                </div>
                 <button id="sheetsBtn" onclick="showSheetsConfigModal()" title="Kết nối Google Sheets"
                     style="padding:10px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#64748b,#475569);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
                     📊 Sheets
@@ -1691,6 +1699,177 @@
         }
         
         // Mở modal cấu hình Google Sheets
+        // ================================================================
+        //  FIREBASE CONFIG MODAL
+        // ================================================================
+        function showFirebaseConfigModal() {
+            const existing = document.getElementById('firebaseModal');
+            if (existing) { existing.remove(); return; }
+            const cfg = FIREBASE.getConfig() || {};
+            const modal = document.createElement('div');
+            modal.id = 'firebaseModal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `
+                <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+                    <div style="background:linear-gradient(135deg,#f97316,#ea580c);padding:24px 28px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="color:white;font-size:20px;font-weight:800;">🔥 Firebase Realtime Database</div>
+                            <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:4px;">Đồng bộ dữ liệu realtime giữa các máy</div>
+                        </div>
+                        <button onclick="document.getElementById('firebaseModal').remove()"
+                            style="background:rgba(255,255,255,0.2);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;">✕</button>
+                    </div>
+                    <div style="padding:28px;">
+
+                        <!-- Status -->
+                        <div id="fbModalStatus" style="padding:12px 16px;border-radius:10px;margin-bottom:20px;font-size:13px;font-weight:600;
+                            ${FIREBASE.connected ? 'background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;' : 'background:#fef3c7;color:#92400e;border:1px solid #fcd34d;'}">
+                            ${FIREBASE.connected ? '✅ Đã kết nối Firebase' : '⚠️ Chưa kết nối — Nhập config bên dưới'}
+                        </div>
+
+                        <!-- Hướng dẫn -->
+                        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:18px;margin-bottom:20px;">
+                            <div style="font-size:14px;font-weight:700;color:#9a3412;margin-bottom:12px;">🚀 Hướng dẫn lấy Firebase Config (3 phút)</div>
+                            <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:#431407;">
+                                <div><span style="background:#f97316;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;margin-right:8px;">1</span>
+                                    Truy cập <a href="https://console.firebase.google.com" target="_blank" style="color:#ea580c;font-weight:600;">console.firebase.google.com</a></div>
+                                <div><span style="background:#f97316;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;margin-right:8px;">2</span>
+                                    Tạo Project → Thêm Web App → Sao chép <strong>firebaseConfig</strong></div>
+                                <div><span style="background:#f97316;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;margin-right:8px;">3</span>
+                                    Vào <strong>Build → Realtime Database</strong> → Tạo database → Chọn vùng → Start in <strong>test mode</strong></div>
+                                <div><span style="background:#f97316;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;margin-right:8px;">4</span>
+                                    Dán các giá trị config vào ô bên dưới → Lưu</div>
+                            </div>
+                        </div>
+
+                        <!-- Config fields -->
+                        <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px;">
+                            <div>
+                                <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px;">API Key *</label>
+                                <input id="fb_apiKey" type="text" placeholder="AIzaSy..." value="${cfg.apiKey||''}"
+                                    style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;outline:none;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px;">Auth Domain *</label>
+                                <input id="fb_authDomain" type="text" placeholder="your-project.firebaseapp.com" value="${cfg.authDomain||''}"
+                                    style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;outline:none;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px;">Database URL * <span style="color:#94a3b8;font-weight:400;">(https://your-project-default-rtdb.firebaseio.com)</span></label>
+                                <input id="fb_dbUrl" type="text" placeholder="https://your-project-default-rtdb.firebaseio.com" value="${cfg.databaseURL||''}"
+                                    style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;outline:none;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px;">Project ID *</label>
+                                <input id="fb_projectId" type="text" placeholder="your-project-id" value="${cfg.projectId||''}"
+                                    style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;outline:none;">
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                <div>
+                                    <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px;">App ID</label>
+                                    <input id="fb_appId" type="text" placeholder="1:xxx:web:xxx" value="${cfg.appId||''}"
+                                        style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;outline:none;">
+                                </div>
+                                <div>
+                                    <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px;">Messaging Sender ID</label>
+                                    <input id="fb_msgId" type="text" placeholder="123456789" value="${cfg.messagingSenderId||''}"
+                                        style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;outline:none;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Migrate button -->
+                        <div id="fbMigrateBox" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:#1e40af;">
+                            💾 Sau khi kết nối thành công, nhấn <strong>"Migrate dữ liệu"</strong> để đẩy dữ liệu localStorage hiện tại lên Firebase (chỉ làm 1 lần).
+                        </div>
+
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <button onclick="connectFirebase()"
+                                style="width:100%;padding:14px;background:linear-gradient(135deg,#f97316,#ea580c);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">
+                                🔥 Kết Nối Firebase
+                            </button>
+                            <button onclick="migrateLocalToFirebase()"
+                                style="width:100%;padding:12px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
+                                ☁️ Migrate dữ liệu localStorage → Firebase
+                            </button>
+                        </div>
+                        <div id="fbConnectMsg" style="margin-top:12px;font-size:13px;font-weight:600;text-align:center;display:none;"></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        function connectFirebase() {
+            const cfg = {
+                apiKey:            document.getElementById('fb_apiKey').value.trim(),
+                authDomain:        document.getElementById('fb_authDomain').value.trim(),
+                databaseURL:       document.getElementById('fb_dbUrl').value.trim(),
+                projectId:         document.getElementById('fb_projectId').value.trim(),
+                appId:             document.getElementById('fb_appId').value.trim(),
+                messagingSenderId: document.getElementById('fb_msgId').value.trim(),
+            };
+            if (!cfg.apiKey || !cfg.databaseURL || !cfg.projectId) {
+                showFbMsg('❌ Vui lòng nhập đủ API Key, Database URL và Project ID', '#fee2e2', '#991b1b');
+                return;
+            }
+            const ok = FIREBASE.init(cfg);
+            if (ok) {
+                showFbMsg('✅ Kết nối thành công! Đang lắng nghe dữ liệu realtime...', '#d1fae5', '#065f46');
+                // Bắt đầu lắng nghe realtime
+                startFirebaseListener();
+                // Cập nhật modal status
+                const s = document.getElementById('fbModalStatus');
+                if (s) { s.textContent = '✅ Đã kết nối Firebase'; s.style.background = '#d1fae5'; s.style.color = '#065f46'; s.style.border = '1px solid #6ee7b7'; }
+            } else {
+                showFbMsg('❌ Kết nối thất bại — kiểm tra lại config', '#fee2e2', '#991b1b');
+            }
+        }
+
+        function showFbMsg(msg, bg, color) {
+            const el = document.getElementById('fbConnectMsg');
+            if (!el) return;
+            el.style.display = 'block';
+            el.style.background = bg;
+            el.style.color = color;
+            el.style.padding = '10px 14px';
+            el.style.borderRadius = '8px';
+            el.textContent = msg;
+        }
+
+        async function migrateLocalToFirebase() {
+            if (!FIREBASE.connected) {
+                showFbMsg('⚠️ Kết nối Firebase trước đã!', '#fef3c7', '#92400e');
+                return;
+            }
+            const local = localStorage.getItem('shipments');
+            const arr = local ? JSON.parse(local) : [];
+            if (arr.length === 0) {
+                showFbMsg('⚠️ Không có dữ liệu localStorage để migrate', '#fef3c7', '#92400e');
+                return;
+            }
+            try {
+                await FIREBASE.setAllShipments(arr);
+                showFbMsg(`✅ Đã migrate ${arr.length} lô hàng lên Firebase!`, '#d1fae5', '#065f46');
+            } catch(e) {
+                showFbMsg('❌ Migrate thất bại: ' + e.message, '#fee2e2', '#991b1b');
+            }
+        }
+
+        function startFirebaseListener() {
+            FIREBASE.listenShipments(data => {
+                // Sắp xếp theo thời gian tạo mới nhất
+                shipments = data.sort((a, b) => (b.createdAt || '') > (a.createdAt || '') ? 1 : -1);
+                // Cũng lưu localStorage làm backup offline
+                saveAllShipmentsDB();
+                updateDashboard();
+                renderShipments();
+            });
+        }
+
+        // ================================================================
+
         function showSheetsConfigModal() {
             const modal = document.createElement('div');
             modal.id = 'sheetsConfigModal';
@@ -2270,10 +2449,134 @@ function appendAudit(sheet, d) {
         // AUDIT LOG - Complete history of all actions (read-only for users)
         let auditLog = []; // Array of all actions, never deleted by user
 
+
+        // ================================================================
+        //  FIREBASE REALTIME DATABASE LAYER
+        // ================================================================
+        const FB_CONFIG_KEY = 'lg_firebase_config';
+
+        const FIREBASE = {
+            app: null,
+            db: null,
+            shipmentsRef: null,
+            auditRef: null,
+            connected: false,
+            unsubscribe: null,
+
+            // Lấy config đã lưu
+            getConfig() {
+                try { return JSON.parse(localStorage.getItem(FB_CONFIG_KEY) || 'null'); } catch { return null; }
+            },
+            saveConfig(cfg) {
+                localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(cfg));
+            },
+
+            // Khởi tạo Firebase
+            init(cfg) {
+                try {
+                    if (this.app) {
+                        // App đã tồn tại — xoá listener cũ
+                        if (this.unsubscribe) this.unsubscribe();
+                        firebase.app().delete().catch(() => {});
+                        this.app = null; this.db = null;
+                    }
+                    this.app = firebase.initializeApp(cfg);
+                    this.db = firebase.database();
+                    this.shipmentsRef = this.db.ref('shipments');
+                    this.auditRef     = this.db.ref('auditLog');
+                    this.connected = true;
+                    this.saveConfig(cfg);
+                    this.showStatus(true);
+                    return true;
+                } catch(e) {
+                    console.error('Firebase init error:', e);
+                    this.connected = false;
+                    this.showStatus(false, e.message);
+                    return false;
+                }
+            },
+
+            // Lắng nghe thay đổi realtime
+            listenShipments(callback) {
+                if (!this.shipmentsRef) return;
+                if (this.unsubscribe) this.unsubscribe();
+                const ref = this.shipmentsRef;
+                const handler = ref.on('value', snap => {
+                    const val = snap.val();
+                    callback(val ? Object.values(val) : []);
+                }, err => console.error('Firebase listen error:', err));
+                this.unsubscribe = () => ref.off('value', handler);
+            },
+
+            // Ghi 1 shipment (thêm hoặc sửa)
+            async setShipment(s) {
+                if (!this.shipmentsRef) return;
+                await this.shipmentsRef.child(String(s.id)).set(s);
+            },
+
+            // Xoá 1 shipment
+            async removeShipment(id) {
+                if (!this.shipmentsRef) return;
+                await this.shipmentsRef.child(String(id)).remove();
+            },
+
+            // Ghi toàn bộ shipments (dùng khi import/migrate)
+            async setAllShipments(arr) {
+                if (!this.shipmentsRef) return;
+                const obj = {};
+                arr.forEach(s => { obj[String(s.id)] = s; });
+                await this.shipmentsRef.set(obj);
+            },
+
+            // Ghi audit log entry
+            async addAudit(entry) {
+                if (!this.auditRef) return;
+                await this.auditRef.push(entry);
+            },
+
+            showStatus(ok, msg) {
+                const el = document.getElementById('fbStatusBadge');
+                if (!el) return;
+                el.textContent = ok ? '🔥 Firebase: Đã kết nối' : '⚠️ Firebase: Chưa kết nối';
+                el.style.background = ok ? '#d1fae5' : '#fef3c7';
+                el.style.color      = ok ? '#065f46' : '#92400e';
+                el.style.border     = ok ? '1px solid #6ee7b7' : '1px solid #fcd34d';
+            }
+        };
+
+        // Wrapper lưu shipment — tự động dùng Firebase nếu đã kết nối, fallback localStorage
+        function saveShipmentDB(s) {
+            // localStorage luôn lưu (offline backup)
+            saveAllShipmentsDB();
+            // Firebase async
+            if (FIREBASE.connected) FIREBASE.setShipment(s).catch(console.error);
+        }
+
+        function removeShipmentDB(id) {
+            saveAllShipmentsDB();
+            if (FIREBASE.connected) FIREBASE.removeShipment(id).catch(console.error);
+        }
+
+        function saveAllShipmentsDB() {
+            localStorage.setItem('shipments', JSON.stringify(shipments));
+        }
+
+        // ================================================================
+
         // Initialize
         function init() {
             // Check login first
             checkAuth();
+
+            // Auto-connect Firebase nếu đã có config lưu sẵn
+            const savedFbCfg = FIREBASE.getConfig();
+            if (savedFbCfg && savedFbCfg.apiKey) {
+                const ok = FIREBASE.init(savedFbCfg);
+                if (ok) {
+                    startFirebaseListener();
+                    console.log('🔥 Firebase auto-connected');
+                }
+            }
             
             // Load Google Sheets config
             loadSheetsConfig();
@@ -2356,7 +2659,7 @@ function appendAudit(sheet, d) {
                 ];
                 
                 shipments = sampleShipments;
-                localStorage.setItem('shipments', JSON.stringify(shipments));
+                saveAllShipmentsDB();
                 console.log('✅ Đã thêm 2 lô hàng mẫu để test!');
             } else {
                 try {
@@ -2377,7 +2680,7 @@ function appendAudit(sheet, d) {
                 });
                 
                 if (needsUpdate) {
-                    localStorage.setItem('shipments', JSON.stringify(shipments));
+                    saveAllShipmentsDB();
                     console.log('Updated profit calculations for existing shipments');
                 }
             }
@@ -2608,7 +2911,8 @@ function appendAudit(sheet, d) {
                     shipmentData.profit = calculateProfit(shipmentData);
                     
                     shipments[index] = shipmentData;
-                    localStorage.setItem('shipments', JSON.stringify(shipments));
+                    saveAllShipmentsDB();
+                    if (FIREBASE.connected) FIREBASE.setShipment(shipmentData).catch(console.error);
                     
                     // Log to audit - truyền cả dữ liệu cũ và mới
                     logAuditAction('EDIT', `Sửa lô hàng: ${shipmentData.company}`, shipmentData, oldData);
@@ -2635,7 +2939,8 @@ function appendAudit(sheet, d) {
                 console.log('Shipment after calculating profit:', shipmentData.profit);
 
                 shipments.unshift(shipmentData);
-                localStorage.setItem('shipments', JSON.stringify(shipments));
+                saveAllShipmentsDB();
+                if (FIREBASE.connected) FIREBASE.setShipment(shipmentData).catch(console.error);
                 
                 // Log to audit
                 logAuditAction('ADD', `Thêm lô hàng: ${shipmentData.company}`, shipmentData);
@@ -3015,7 +3320,8 @@ function appendAudit(sheet, d) {
             
             logDelete([shipment]);
             shipments = shipments.filter(s => s.id !== id);
-            localStorage.setItem('shipments', JSON.stringify(shipments));
+            saveAllShipmentsDB();
+            if (FIREBASE.connected) FIREBASE.removeShipment(id).catch(console.error);
 
             showNotification('🗑️ Đã xóa & lưu lịch sử!');
             updateDashboard(); renderShipments(); 
@@ -3076,7 +3382,8 @@ function appendAudit(sheet, d) {
             
             logDelete(toDelete);
             shipments = shipments.filter(s => !ids.includes(s.id));
-            localStorage.setItem('shipments', JSON.stringify(shipments));
+            saveAllShipmentsDB();
+            if (FIREBASE.connected) ids.forEach(id => FIREBASE.removeShipment(id).catch(console.error));
 
             document.getElementById('bulkDeleteBtn').style.display = 'none';
             document.getElementById('bulkEditRateBtn').style.display = 'none';
@@ -3214,7 +3521,7 @@ function appendAudit(sheet, d) {
                 return s;
             });
             
-            localStorage.setItem('shipments', JSON.stringify(shipments));
+            saveAllShipmentsDB();
             
             // Log to audit
             const affectedShipments = shipments.filter(s => ids.includes(s.id));
@@ -3378,7 +3685,7 @@ function appendAudit(sheet, d) {
                 return s;
             });
             
-            localStorage.setItem('shipments', JSON.stringify(shipments));
+            saveAllShipmentsDB();
             
             // Log to audit
             const affectedShipments = shipments.filter(s => ids.includes(s.id));
@@ -3455,7 +3762,7 @@ function appendAudit(sheet, d) {
             
             // Restore previous state
             shipments = JSON.parse(JSON.stringify(lastState.data));
-            localStorage.setItem('shipments', JSON.stringify(shipments));
+            saveAllShipmentsDB();
             
             // Sync toàn bộ dữ liệu sau undo lên Sheets (ghi log audit)
             logAuditToSheets('UNDO', `Hoàn tác: ${lastState.action}`, shipments.slice(0, 5));
@@ -4302,7 +4609,7 @@ function appendAudit(sheet, d) {
             // Restore full shipment data
             const restored = { ...item, restoredAt: new Date().toISOString(), profit: item.profit || 0 };
             shipments.unshift(restored);
-            localStorage.setItem('shipments', JSON.stringify(shipments));
+            saveAllShipmentsDB();
 
             // Sync to Google Sheets
             syncShipmentToSheets(restored, 'ADD');
@@ -4337,7 +4644,7 @@ function appendAudit(sheet, d) {
 
             history.splice(entryIdx, 1);
             saveDeleteHistory(history);
-            localStorage.setItem('shipments', JSON.stringify(shipments));
+            saveAllShipmentsDB();
 
             // Sync to Google Sheets
             restoredItems.forEach(s => syncShipmentToSheets(s, 'ADD'));
@@ -4551,7 +4858,8 @@ function appendAudit(sheet, d) {
             const newStatus = current === 'com_paid' ? 'com_pending' : 'com_paid';
             saveStateToUndo(`Cập nhật com status: ${shipments[idx].company}`);
             shipments[idx] = { ...shipments[idx], comPaymentStatus: newStatus };
-            localStorage.setItem('shipments', JSON.stringify(shipments));
+            saveAllShipmentsDB();
+            if (FIREBASE.connected) FIREBASE.setShipment(shipments[idx]).catch(console.error);
             logAuditAction('EDIT', `Cập nhật com status: ${shipments[idx].company} → ${newStatus}`, shipments[idx]);
             
             // Sync to Google Sheets
@@ -4653,7 +4961,7 @@ function appendAudit(sheet, d) {
                     return { ...s, profit: newProfit };
                 });
                 
-                localStorage.setItem('shipments', JSON.stringify(shipments));
+                saveAllShipmentsDB();
                 
                 // Sync updated shipments to Google Sheets
                 if (updated > 0) {
