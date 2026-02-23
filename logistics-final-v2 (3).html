@@ -1723,6 +1723,11 @@
                                 🧪 Kiểm Tra Kết Nối
                             </button>
                         </div>
+                        <button onclick="debugSyncNow()" 
+                            style="width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
+                            🔬 Gửi Dữ Liệu Test Ngay → Sheet
+                        </button>
+                        <div id="debugResultBox"></div>
                     </div>
                 </div>
             `;
@@ -1921,20 +1926,202 @@ function appendAudit(sheet, d) {
                 showNotification('⚠️ Nhập URL và Sheet ID trước!', 'error');
                 return;
             }
-            showNotification('🔄 Đang kiểm tra kết nối...');
+            
+            const btn = document.querySelector('[onclick="testSheetsConnection()"]');
+            if (btn) { btn.textContent = '🔄 Đang kiểm tra...'; btn.disabled = true; }
+            
+            const results = [];
+            
+            // Test 1: Kiểm tra URL có hợp lệ không
+            results.push({ step: '1. Kiểm tra URL', status: url.includes('script.google.com') ? '✅ URL hợp lệ' : '❌ URL không phải Google Apps Script' });
+            
+            // Test 2: Kiểm tra Sheet ID
+            results.push({ step: '2. Kiểm tra Sheet ID', status: id.length > 20 ? '✅ Sheet ID hợp lệ' : '❌ Sheet ID quá ngắn' });
+            
+            // Test 3: Gửi request thực tế
+            let fetchStatus = '';
+            try {
+                const testPayload = {
+                    action: 'logAudit',
+                    sheetId: id,
+                    data: {
+                        timestamp: new Date().toISOString(),
+                        user: getCurrentUser() || 'test-user',
+                        actionType: 'TEST',
+                        description: '🧪 Test kết nối từ app - ' + new Date().toLocaleString('vi-VN'),
+                        recordCount: 1,
+                        affectedIds: 'TEST-ID',
+                        affectedCompanies: 'TEST COMPANY',
+                        oldData: '',
+                        newData: '{"test": true}'
+                    }
+                };
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(testPayload)
+                });
+                
+                fetchStatus = '✅ Request gửi thành công (no-cors)\n→ Kiểm tra sheet "LỊCH SỬ THAO TÁC" có dòng TEST không?';
+                results.push({ step: '3. Gửi request test', status: fetchStatus });
+                
+            } catch (err) {
+                fetchStatus = '❌ Lỗi: ' + err.message;
+                results.push({ step: '3. Gửi request test', status: fetchStatus });
+            }
+            
+            if (btn) { btn.textContent = '🧪 Kiểm Tra Kết Nối'; btn.disabled = false; }
+            
+            // Hiển thị kết quả debug
+            const existing = document.getElementById('debugResultBox');
+            if (existing) existing.remove();
+            
+            const box = document.createElement('div');
+            box.id = 'debugResultBox';
+            box.style.cssText = 'margin-top:16px;background:#0f172a;border-radius:12px;padding:16px;';
+            box.innerHTML = `
+                <div style="color:#94a3b8;font-size:12px;font-weight:700;margin-bottom:10px;text-transform:uppercase;">Kết quả kiểm tra</div>
+                ${results.map(r => `
+                    <div style="margin-bottom:8px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;">
+                        <div style="color:#64748b;font-size:11px;margin-bottom:3px;">${r.step}</div>
+                        <div style="color:${r.status.startsWith('✅') ? '#4ade80' : '#f87171'};font-size:13px;font-weight:600;white-space:pre-line;">${r.status}</div>
+                    </div>
+                `).join('')}
+                <div style="margin-top:12px;padding:10px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;">
+                    <div style="color:#fbbf24;font-size:12px;font-weight:700;margin-bottom:6px;">⚠️ Quan trọng - no-cors limitation</div>
+                    <div style="color:#d4af37;font-size:12px;line-height:1.6;">
+                        Vì browser security, app <strong>không thể đọc response</strong> từ Google Script (no-cors).<br>
+                        Cách duy nhất để verify: <strong>mở Google Sheet và kiểm tra có dòng TEST không</strong>.<br>
+                        Nếu có dòng TEST → kết nối OK, chỉ cần deploy lại Apps Script với code mới nhất.
+                    </div>
+                </div>
+            `;
+            
+            const modal = document.getElementById('sheetsConfigModal');
+            if (modal) {
+                const inputArea = modal.querySelector('#inputSheetId').closest('div').parentNode;
+                inputArea.appendChild(box);
+            }
+        }
+        
+        // ========== DEBUG SYNC ==========
+        async function debugSyncNow() {
+            const url = document.getElementById('inputScriptUrl') 
+                ? document.getElementById('inputScriptUrl').value.trim() 
+                : SHEETS_CONFIG.scriptUrl;
+            const id = document.getElementById('inputSheetId') 
+                ? document.getElementById('inputSheetId').value.trim() 
+                : SHEETS_CONFIG.sheetId;
+            
+            if (!url || !id) {
+                alert('⚠️ Chưa nhập URL hoặc Sheet ID!');
+                return;
+            }
+            
+            const box = document.getElementById('debugResultBox');
+            if (box) box.innerHTML = '<div style="color:#94a3b8;padding:12px;font-size:13px;">⏳ Đang gửi dữ liệu test...</div>';
+            
+            const now = new Date();
+            const testId = 'TEST-' + now.getTime();
+            const logs = [];
+            
+            // --- Test 1: Gửi lô hàng test vào "DATA KHÁCH HÀNG" ---
+            const shipmentPayload = {
+                action: 'syncShipment',
+                operation: 'ADD',
+                sheetId: id,
+                data: {
+                    id: testId,
+                    company: '🧪 TEST COMPANY',
+                    customerName: 'Test User',
+                    readyDate: now.toISOString().split('T')[0],
+                    carrier: 'TEST AIR',
+                    dest: 'TEST',
+                    mawb: 'TEST-MAWB',
+                    cw: 100, gw: 105,
+                    purchaseUnitPrice: 3.5, sellingUnitPrice: 4.5,
+                    purchasePrice: 350, sellingPrice: 450, makePrice: 100,
+                    xray: 0.017, awb: 15, ams: 10,
+                    profit: '100.00',
+                    commissionVND: 101200, commissionCent: 0.05,
+                    commissionTax: 20, commissionRate: 25300,
+                    comPaymentStatus: 'Chưa trả com',
+                    paymentStatus: 'Chưa thanh toán',
+                    customerNote: 'Dòng test - xóa sau khi confirm OK',
+                    createdAt: now.toISOString(),
+                    updatedAt: now.toISOString(),
+                    updatedBy: getCurrentUser() || 'test'
+                }
+            };
+            
             try {
                 await fetch(url, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'test', sheetId: id, data: { test: true } })
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(shipmentPayload)
                 });
-                showNotification('✅ Kết nối thành công! (no-cors mode)');
-            } catch (err) {
-                showNotification('❌ Lỗi kết nối: ' + err.message, 'error');
+                logs.push({ ok: true, msg: 'Gửi lô hàng test → sheet "DATA KHÁCH HÀNG"' });
+            } catch(e) {
+                logs.push({ ok: false, msg: 'Lỗi gửi shipment: ' + e.message });
+            }
+            
+            // --- Test 2: Gửi log vào "LỊCH SỬ THAO TÁC" ---
+            const auditPayload = {
+                action: 'logAudit',
+                sheetId: id,
+                data: {
+                    timestamp: now.toISOString(),
+                    user: getCurrentUser() || 'test',
+                    actionType: 'TEST',
+                    description: '🧪 Debug test - ' + now.toLocaleString('vi-VN'),
+                    recordCount: 1,
+                    affectedIds: testId,
+                    affectedCompanies: 'TEST COMPANY',
+                    oldData: '',
+                    newData: '{"test":true}'
+                }
+            };
+            
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(auditPayload)
+                });
+                logs.push({ ok: true, msg: 'Gửi log test → sheet "LỊCH SỬ THAO TÁC"' });
+            } catch(e) {
+                logs.push({ ok: false, msg: 'Lỗi gửi audit: ' + e.message });
+            }
+            
+            // Hiển thị kết quả
+            if (box) {
+                box.innerHTML = `
+                    <div style="margin-top:12px;background:#0f172a;border-radius:12px;padding:16px;">
+                        <div style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:10px;text-transform:uppercase;">Kết quả Debug</div>
+                        ${logs.map(l => `
+                            <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;">
+                                <span style="font-size:16px;">${l.ok ? '✅' : '❌'}</span>
+                                <span style="color:${l.ok ? '#4ade80' : '#f87171'};font-size:13px;">${l.msg}</span>
+                            </div>
+                        `).join('')}
+                        <div style="margin-top:12px;padding:12px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;">
+                            <div style="color:#fbbf24;font-size:12px;font-weight:700;margin-bottom:6px;">📋 Bước kiểm tra tiếp theo</div>
+                            <div style="color:#d4af37;font-size:12px;line-height:1.8;">
+                                1. Mở <a href="https://docs.google.com/spreadsheets/d/${id}" target="_blank" style="color:#60a5fa;">Google Sheet của bạn</a><br>
+                                2. Xem tab <strong>DATA KHÁCH HÀNG</strong> — có dòng "🧪 TEST COMPANY" không?<br>
+                                3. Xem tab <strong>LỊCH SỬ THAO TÁC</strong> — có dòng "TEST" không?<br>
+                                4. Nếu <strong>không có</strong> → Apps Script chưa deploy đúng hoặc chưa cấp quyền<br>
+                                5. Nếu <strong>có</strong> → Sync đang hoạt động ✅
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
         }
-        
         function updateSheetsButton() {
             const btn = document.getElementById('sheetsBtn');
             if (!btn) return;
