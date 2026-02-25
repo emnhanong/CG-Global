@@ -5588,6 +5588,13 @@ function appendAudit(sheet, d) {
             const shipment = shipments.find(s => s.id === id);
             if (!shipment) return;
 
+            // On mobile: use dedicated bottom sheet
+            if (IS_MOBILE()) {
+                openMobEditSheet(id);
+                return;
+            }
+
+            // Desktop: original behavior
             // Set editing mode
             editingShipmentId = id;
 
@@ -6578,6 +6585,493 @@ function appendAudit(sheet, d) {
                 if (listCard) listCard.style.display = '';
             }
         }, 600);
+    </script>
+
+    <!-- ═══════════ MOBILE EDIT BOTTOM SHEET ═══════════ -->
+    <div id="mobEditSheet" style="
+        display:none;
+        position:fixed;
+        inset:0;
+        z-index:19999;
+    ">
+        <!-- Backdrop -->
+        <div id="mobEditBackdrop" onclick="closeMobEditSheet()" style="
+            position:absolute;inset:0;
+            background:rgba(0,0,0,0.65);
+            backdrop-filter:blur(2px);
+        "></div>
+
+        <!-- Sheet panel -->
+        <div id="mobEditPanel" style="
+            position:absolute;
+            bottom:0; left:0; right:0;
+            background:linear-gradient(180deg,#1c1400,#111000);
+            border-radius:20px 20px 0 0;
+            border-top:1.5px solid rgba(212,175,55,0.3);
+            max-height:92vh;
+            display:flex;
+            flex-direction:column;
+            transform:translateY(100%);
+            transition:transform 0.32s cubic-bezier(0.32,0.72,0,1);
+            box-shadow:0 -8px 40px rgba(0,0,0,0.6);
+        ">
+            <!-- Drag handle -->
+            <div style="padding:12px 0 4px;display:flex;justify-content:center;flex-shrink:0;">
+                <div style="width:36px;height:4px;border-radius:2px;background:rgba(212,175,55,0.3);"></div>
+            </div>
+
+            <!-- Header -->
+            <div style="
+                display:flex;align-items:center;justify-content:space-between;
+                padding:8px 18px 12px;
+                border-bottom:1px solid rgba(212,175,55,0.15);
+                flex-shrink:0;
+            ">
+                <div>
+                    <div style="font-size:16px;font-weight:800;color:#d4af37;">✏️ Chỉnh Sửa Lô Hàng</div>
+                    <div id="mobEditSheetSubtitle" style="font-size:11px;color:rgba(212,175,55,0.5);margin-top:2px;"></div>
+                </div>
+                <button onclick="closeMobEditSheet()" style="
+                    background:rgba(212,175,55,0.12);border:none;border-radius:50%;
+                    width:32px;height:32px;font-size:16px;cursor:pointer;color:#d4af37;
+                    display:flex;align-items:center;justify-content:center;
+                ">✕</button>
+            </div>
+
+            <!-- Scrollable form body -->
+            <div style="overflow-y:auto;flex:1;padding:16px 16px max(80px,calc(70px + env(safe-area-inset-bottom)));">
+
+                <!-- Section: Thông tin cơ bản -->
+                <div class="mob-edit-section">
+                    <div class="mob-edit-section-title">📦 Thông tin cơ bản</div>
+                    <div class="mob-edit-row">
+                        <label class="mob-edit-label">Company *</label>
+                        <input type="text" id="me_company" class="mob-edit-input" placeholder="Tên công ty">
+                    </div>
+                    <div class="mob-edit-row">
+                        <label class="mob-edit-label">Khách hàng</label>
+                        <input type="text" id="me_customerName" class="mob-edit-input" placeholder="VD: YIYU - Chị Dương">
+                    </div>
+                    <div class="mob-edit-row2">
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">Ready Date *</label>
+                            <input type="date" id="me_readyDate" class="mob-edit-input">
+                        </div>
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">Carrier</label>
+                            <input type="text" id="me_carrier" class="mob-edit-input" placeholder="Hãng vận chuyển">
+                        </div>
+                    </div>
+                    <div class="mob-edit-row2">
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">Destination</label>
+                            <input type="text" id="me_dest" class="mob-edit-input" placeholder="Điểm đến">
+                        </div>
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">MAWB</label>
+                            <input type="text" id="me_mawb" class="mob-edit-input" placeholder="Mã vận đơn">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Trọng lượng -->
+                <div class="mob-edit-section">
+                    <div class="mob-edit-section-title">⚖️ Trọng lượng</div>
+                    <div class="mob-edit-row2">
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">GW (kg)</label>
+                            <input type="number" id="me_gw" class="mob-edit-input" placeholder="0" step="0.01" oninput="mobEditCalc()">
+                        </div>
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">CW (kg) *</label>
+                            <input type="number" id="me_cw" class="mob-edit-input" placeholder="0" step="0.01" oninput="mobEditCalc()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Giá -->
+                <div class="mob-edit-section">
+                    <div class="mob-edit-section-title">💰 Giá cước</div>
+                    <div class="mob-edit-row2">
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">Giá mua ($/kg)</label>
+                            <input type="number" id="me_purchaseUnitPrice" class="mob-edit-input" placeholder="0" step="0.01" oninput="mobEditCalc()">
+                        </div>
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">Giá bán ($/kg)</label>
+                            <input type="number" id="me_sellingUnitPrice" class="mob-edit-input" placeholder="0" step="0.01" oninput="mobEditCalc()">
+                        </div>
+                    </div>
+                    <div class="mob-edit-row2">
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">X-Ray ($/kg)</label>
+                            <input type="number" id="me_xray" class="mob-edit-input" value="0.017" step="0.001" oninput="mobEditCalc()">
+                        </div>
+                        <div class="mob-edit-row">
+                            <label class="mob-edit-label">AWB ($)</label>
+                            <input type="number" id="me_awb" class="mob-edit-input" placeholder="0" step="0.01" oninput="mobEditCalc()">
+                        </div>
+                    </div>
+                    <div class="mob-edit-row">
+                        <label class="mob-edit-label">AMS ($)</label>
+                        <input type="number" id="me_ams" class="mob-edit-input" placeholder="0" step="0.01" oninput="mobEditCalc()">
+                    </div>
+
+                    <!-- Live P&L preview -->
+                    <div id="mobEditCalcBox" style="
+                        background:rgba(212,175,55,0.07);
+                        border:1px solid rgba(212,175,55,0.2);
+                        border-radius:12px;
+                        padding:12px 14px;
+                        margin-top:10px;
+                        display:grid;
+                        grid-template-columns:1fr 1fr;
+                        gap:8px 12px;
+                    ">
+                        <div>
+                            <div style="font-size:10px;color:rgba(212,175,55,0.5);margin-bottom:2px;">Giá mua</div>
+                            <div id="me_purchaseTotal" style="font-size:14px;font-weight:700;color:#f59e0b;">$0.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px;color:rgba(212,175,55,0.5);margin-bottom:2px;">Doanh thu</div>
+                            <div id="me_sellingTotal" style="font-size:14px;font-weight:700;color:#60a5fa;">$0.00</div>
+                        </div>
+                        <div style="grid-column:span 2;border-top:1px solid rgba(212,175,55,0.15);padding-top:8px;">
+                            <div style="font-size:10px;color:rgba(212,175,55,0.5);margin-bottom:2px;">🏆 Lợi nhuận</div>
+                            <div id="me_profit" style="font-size:18px;font-weight:800;color:#10b981;">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Commission -->
+                <div class="mob-edit-section">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <div class="mob-edit-section-title" style="margin-bottom:0;">💸 Hoa hồng</div>
+                        <button type="button" onclick="mobEditAddCommRow()" style="
+                            background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);
+                            border-radius:8px;padding:5px 10px;color:#10b981;font-size:11px;
+                            font-weight:700;cursor:pointer;
+                        ">＋ Thêm</button>
+                    </div>
+                    <div style="font-size:10px;color:rgba(212,175,55,0.4);margin:6px 0 10px;">
+                        Cent × CW × (100−Thuế)% × Tỷ giá
+                    </div>
+                    <div id="mobEditCommRows"></div>
+                    <div style="
+                        background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.2);
+                        border-radius:10px;padding:10px 14px;margin-top:8px;
+                        display:flex;justify-content:space-between;align-items:center;
+                    ">
+                        <span style="font-size:12px;color:rgba(212,175,55,0.6);font-weight:600;">Tổng hoa hồng</span>
+                        <span id="me_totalComm" style="font-size:16px;font-weight:800;color:#10b981;">0₫</span>
+                    </div>
+                </div>
+
+                <!-- Section: Trạng thái & Ghi chú -->
+                <div class="mob-edit-section">
+                    <div class="mob-edit-section-title">📋 Trạng thái & Ghi chú</div>
+                    <div class="mob-edit-row">
+                        <label class="mob-edit-label">Thanh toán</label>
+                        <select id="me_paymentStatus" class="mob-edit-input">
+                            <option value="pending">⏳ Chưa thanh toán</option>
+                            <option value="paid">✅ Đã thanh toán</option>
+                        </select>
+                    </div>
+                    <div class="mob-edit-row">
+                        <label class="mob-edit-label">Ghi chú</label>
+                        <input type="text" id="me_customerNote" class="mob-edit-input" placeholder="Ghi chú khách hàng">
+                    </div>
+                </div>
+
+            </div><!-- /scroll body -->
+
+            <!-- Fixed action buttons at bottom -->
+            <div style="
+                position:absolute;bottom:0;left:0;right:0;
+                padding:12px 16px max(16px,env(safe-area-inset-bottom));
+                background:linear-gradient(0deg,#111000 80%,transparent);
+                display:flex;gap:10px;
+                flex-shrink:0;
+            ">
+                <button onclick="closeMobEditSheet()" style="
+                    flex:1;padding:13px;border:1.5px solid rgba(212,175,55,0.3);
+                    border-radius:12px;background:transparent;color:rgba(212,175,55,0.7);
+                    font-size:14px;font-weight:700;cursor:pointer;
+                ">Hủy</button>
+                <button onclick="saveMobEdit()" style="
+                    flex:2;padding:13px;border:none;
+                    border-radius:12px;
+                    background:linear-gradient(135deg,#d4af37,#b8860b);
+                    color:#1a1200;font-size:15px;font-weight:800;cursor:pointer;
+                    box-shadow:0 4px 16px rgba(212,175,55,0.35);
+                ">💾 Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .mob-edit-section {
+            background:rgba(255,255,255,0.03);
+            border:1px solid rgba(212,175,55,0.12);
+            border-radius:14px;
+            padding:14px;
+            margin-bottom:12px;
+        }
+        .mob-edit-section-title {
+            font-size:12px;font-weight:700;
+            color:rgba(212,175,55,0.7);
+            text-transform:uppercase;letter-spacing:0.5px;
+            margin-bottom:12px;
+        }
+        .mob-edit-row { margin-bottom:10px; }
+        .mob-edit-row:last-child { margin-bottom:0; }
+        .mob-edit-row2 { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px; }
+        .mob-edit-row2 .mob-edit-row { margin-bottom:0; }
+        .mob-edit-label {
+            display:block;font-size:11px;font-weight:600;
+            color:rgba(212,175,55,0.55);margin-bottom:5px;
+        }
+        .mob-edit-input {
+            width:100%;box-sizing:border-box;
+            background:rgba(255,255,255,0.06);
+            border:1.5px solid rgba(212,175,55,0.2);
+            border-radius:10px;padding:10px 12px;
+            color:#f0e6c0;font-size:14px;font-weight:600;
+            outline:none;-webkit-appearance:none;appearance:none;
+        }
+        .mob-edit-input:focus {
+            border-color:rgba(212,175,55,0.6);
+            background:rgba(255,255,255,0.09);
+        }
+        .mob-edit-input::placeholder { color:rgba(212,175,55,0.25); }
+        .mob-edit-comm-row {
+            background:rgba(255,255,255,0.04);
+            border:1px solid rgba(212,175,55,0.15);
+            border-radius:10px;padding:10px;
+            margin-bottom:8px;position:relative;
+        }
+        .mob-edit-comm-row .mob-edit-row2 { margin-bottom:6px; }
+    </style>
+
+    <script>
+        // ═══ Mobile Edit Sheet ═══
+        let mobEditShipmentId = null;
+
+        function openMobEditSheet(id) {
+            const s = shipments.find(x => x.id === id);
+            if (!s) return;
+            mobEditShipmentId = id;
+
+            // Fill basic info
+            document.getElementById('me_company').value = s.company || '';
+            document.getElementById('me_customerName').value = s.customerName || '';
+            document.getElementById('me_readyDate').value = s.readyDate || '';
+            document.getElementById('me_carrier').value = s.carrier || '';
+            document.getElementById('me_dest').value = s.dest || '';
+            document.getElementById('me_mawb').value = s.mawb || '';
+            document.getElementById('me_gw').value = s.gw || 0;
+            document.getElementById('me_cw').value = s.cw || 0;
+            document.getElementById('me_purchaseUnitPrice').value = s.purchaseUnitPrice || 0;
+            document.getElementById('me_sellingUnitPrice').value = s.sellingUnitPrice || 0;
+            document.getElementById('me_xray').value = s.xray || 0.017;
+            document.getElementById('me_awb').value = s.awb || 0;
+            document.getElementById('me_ams').value = s.ams || 0;
+            document.getElementById('me_paymentStatus').value = s.paymentStatus || 'pending';
+            document.getElementById('me_customerNote').value = s.customerNote || '';
+
+            // Subtitle
+            document.getElementById('mobEditSheetSubtitle').textContent =
+                (s.company || 'Lô hàng') + (s.readyDate ? ' · ' + new Date(s.readyDate).toLocaleDateString('vi-VN') : '');
+
+            // Fill commissions
+            mobEditLoadComms(s);
+
+            // Calculate
+            mobEditCalc();
+
+            // Show sheet
+            const sheet = document.getElementById('mobEditSheet');
+            const panel = document.getElementById('mobEditPanel');
+            sheet.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    panel.style.transform = 'translateY(0)';
+                });
+            });
+        }
+
+        function closeMobEditSheet() {
+            const panel = document.getElementById('mobEditPanel');
+            panel.style.transform = 'translateY(100%)';
+            document.body.style.overflow = '';
+            setTimeout(() => {
+                document.getElementById('mobEditSheet').style.display = 'none';
+                mobEditShipmentId = null;
+            }, 320);
+        }
+
+        function mobEditCalc() {
+            const gw = parseFloat(document.getElementById('me_gw').value) || 0;
+            const cw = parseFloat(document.getElementById('me_cw').value) || 0;
+            const pu = parseFloat(document.getElementById('me_purchaseUnitPrice').value) || 0;
+            const su = parseFloat(document.getElementById('me_sellingUnitPrice').value) || 0;
+            const xray = parseFloat(document.getElementById('me_xray').value) || 0;
+            const awb = parseFloat(document.getElementById('me_awb').value) || 0;
+            const ams = parseFloat(document.getElementById('me_ams').value) || 0;
+            const purchase = pu * cw + xray * gw + awb + ams;
+            const selling = su * cw + xray * gw + awb + ams;
+            const profit = selling - purchase;
+            const fmt = v => '$' + Math.abs(v).toFixed(2);
+            document.getElementById('me_purchaseTotal').textContent = fmt(purchase);
+            document.getElementById('me_sellingTotal').textContent = fmt(selling);
+            const profEl = document.getElementById('me_profit');
+            profEl.textContent = (profit < 0 ? '-' : '') + fmt(profit);
+            profEl.style.color = profit >= 0 ? '#10b981' : '#ef4444';
+            mobEditCalcComm();
+        }
+
+        function mobEditLoadComms(s) {
+            const container = document.getElementById('mobEditCommRows');
+            container.innerHTML = '';
+            let comms = [];
+            if (s.commissions && s.commissions.length > 0) {
+                comms = s.commissions;
+            } else if (s.commissionCent || s.commissionVND) {
+                comms = [{ name: '', cent: s.commissionCent || 0, tax: s.commissionTax || 20, rate: s.commissionRate || exchangeRate }];
+            }
+            comms.forEach((c, i) => mobEditAddCommRow(c));
+            if (comms.length === 0) mobEditAddCommRow();
+        }
+
+        function mobEditAddCommRow(prefill = {}) {
+            const container = document.getElementById('mobEditCommRows');
+            const idx = container.children.length;
+            const div = document.createElement('div');
+            div.className = 'mob-edit-comm-row';
+            div.dataset.idx = idx;
+            div.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <input type="text" placeholder="Tên người nhận" value="${prefill.name||''}"
+                        class="mob-edit-input" style="flex:1;margin-right:8px;font-size:12px;padding:7px 10px;"
+                        oninput="mobEditCalcComm()">
+                    <button onclick="this.closest('.mob-edit-comm-row').remove();mobEditCalcComm();"
+                        style="background:rgba(239,68,68,0.15);border:none;border-radius:8px;
+                        width:30px;height:30px;color:#ef4444;font-size:16px;cursor:pointer;flex-shrink:0;">✕</button>
+                </div>
+                <div class="mob-edit-row2">
+                    <div class="mob-edit-row">
+                        <label class="mob-edit-label">Cent (¢/kg)</label>
+                        <input type="number" class="mob-edit-input" style="font-size:13px;padding:8px 10px;"
+                            placeholder="0" step="0.01" value="${prefill.cent||0}" oninput="mobEditCalcComm()">
+                    </div>
+                    <div class="mob-edit-row">
+                        <label class="mob-edit-label">Thuế (%)</label>
+                        <input type="number" class="mob-edit-input" style="font-size:13px;padding:8px 10px;"
+                            placeholder="20" value="${prefill.tax !== undefined ? prefill.tax : 20}" oninput="mobEditCalcComm()">
+                    </div>
+                </div>
+                <div class="mob-edit-row">
+                    <label class="mob-edit-label">Tỷ giá (₫)</label>
+                    <input type="number" class="mob-edit-input" style="font-size:13px;padding:8px 10px;"
+                        value="${prefill.rate || exchangeRate || 25300}" oninput="mobEditCalcComm()">
+                </div>
+                <div style="font-size:11px;color:#10b981;font-weight:700;margin-top:6px;text-align:right;" class="comm-row-result">0₫</div>
+            `;
+            container.appendChild(div);
+            mobEditCalcComm();
+        }
+
+        function mobEditCalcComm() {
+            const cw = parseFloat(document.getElementById('me_cw').value) || 0;
+            const rows = document.querySelectorAll('#mobEditCommRows .mob-edit-comm-row');
+            let total = 0;
+            rows.forEach(row => {
+                const inputs = row.querySelectorAll('input[type="number"]');
+                const cent = parseFloat(inputs[0]?.value) || 0;
+                const tax = parseFloat(inputs[1]?.value) || 0;
+                const rate = parseFloat(inputs[2]?.value) || exchangeRate || 25300;
+                const vnd = (cent / 100) * cw * (1 - tax / 100) * rate;
+                total += vnd;
+                const resultEl = row.querySelector('.comm-row-result');
+                if (resultEl) resultEl.textContent = new Intl.NumberFormat('vi-VN').format(Math.round(vnd)) + '₫';
+            });
+            document.getElementById('me_totalComm').textContent = new Intl.NumberFormat('vi-VN').format(Math.round(total)) + '₫';
+        }
+
+        function saveMobEdit() {
+            const id = mobEditShipmentId;
+            if (!id) return;
+
+            const company = document.getElementById('me_company').value.trim();
+            const cw = parseFloat(document.getElementById('me_cw').value) || 0;
+            const purchaseUnitPrice = parseFloat(document.getElementById('me_purchaseUnitPrice').value) || 0;
+            const sellingUnitPrice = parseFloat(document.getElementById('me_sellingUnitPrice').value) || 0;
+            if (!company) { alert('Vui lòng nhập tên công ty'); return; }
+            if (!cw) { alert('Vui lòng nhập CW'); return; }
+
+            const gw = parseFloat(document.getElementById('me_gw').value) || 0;
+            const xray = parseFloat(document.getElementById('me_xray').value) || 0.017;
+            const awb = parseFloat(document.getElementById('me_awb').value) || 0;
+            const ams = parseFloat(document.getElementById('me_ams').value) || 0;
+            const purchasePrice = purchaseUnitPrice * cw + xray * gw + awb + ams;
+            const sellingPrice = sellingUnitPrice * cw + xray * gw + awb + ams;
+            const profit = sellingPrice - purchasePrice;
+
+            // Collect commissions
+            const rows = document.querySelectorAll('#mobEditCommRows .mob-edit-comm-row');
+            const commissions = [];
+            let totalCommVND = 0, totalCommUSD = 0;
+            rows.forEach(row => {
+                const nameEl = row.querySelector('input[type="text"]');
+                const inputs = row.querySelectorAll('input[type="number"]');
+                const name = nameEl?.value.trim() || '';
+                const cent = parseFloat(inputs[0]?.value) || 0;
+                const tax = parseFloat(inputs[1]?.value) || 0;
+                const rate = parseFloat(inputs[2]?.value) || exchangeRate || 25300;
+                const vnd = (cent / 100) * cw * (1 - tax / 100) * rate;
+                const usd = rate > 0 ? vnd / rate : 0;
+                if (cent > 0 || name) {
+                    commissions.push({ name, cent, tax, rate, vnd, usd });
+                    totalCommVND += vnd;
+                    totalCommUSD += usd;
+                }
+            });
+
+            const idx = shipments.findIndex(s => s.id === id);
+            if (idx === -1) return;
+
+            const updated = {
+                ...shipments[idx],
+                company,
+                customerName: document.getElementById('me_customerName').value.trim(),
+                readyDate: document.getElementById('me_readyDate').value,
+                carrier: document.getElementById('me_carrier').value.trim(),
+                dest: document.getElementById('me_dest').value.trim(),
+                mawb: document.getElementById('me_mawb').value.trim(),
+                gw, cw, purchaseUnitPrice, sellingUnitPrice, xray, awb, ams,
+                purchasePrice, sellingPrice, profit,
+                paymentStatus: document.getElementById('me_paymentStatus').value,
+                customerNote: document.getElementById('me_customerNote').value.trim(),
+                commissions,
+                commissionVND: totalCommVND,
+                commissionUSD: totalCommUSD,
+                commissionCent: commissions.length > 0 ? commissions[0].cent : 0,
+                commissionTax: commissions.length > 0 ? commissions[0].tax : 20,
+                commissionRate: commissions.length > 0 ? commissions[0].rate : (exchangeRate || 25300),
+            };
+
+            const old = shipments[idx];
+            shipments[idx] = updated;
+            saveData();
+            if (typeof logAction === 'function') {
+                logAction('EDIT', updated, old);
+            }
+            renderShipments();
+            updateDashboard && updateDashboard();
+            closeMobEditSheet();
+            showNotification('✅ Đã cập nhật lô hàng: ' + company, 'success');
+        }
     </script>
     
 </body>
