@@ -1534,27 +1534,215 @@
             background: #fffbeb !important; outline: 2px solid #d4af37; outline-offset: -2px;
         }
 
-        /* Mobile expense card */
+        /* ═══ MOBILE EXPENSE CARD — redesigned ═══ */
         .exp-mob-card {
-            background: white; border-radius: 14px; padding: 14px 16px;
-            margin-bottom: 10px; border: 1px solid #e2e8f0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            transition: transform 0.15s;
+            background: white;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            border: 1px solid #f0e8c8;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            overflow: hidden;
+            transition: box-shadow 0.2s, transform 0.15s;
         }
-        .exp-mob-card:active { transform: scale(0.99); }
-        .exp-mob-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 8px; }
-        .exp-mob-desc { font-size: 14px; font-weight: 700; color: #1e293b; flex: 1; }
-        .exp-mob-date { font-size: 11px; color: #94a3b8; white-space: nowrap; }
-        .exp-mob-amount { font-size: 18px; font-weight: 800; color: #1a1200; margin-bottom: 8px; }
-        .exp-mob-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-        .exp-mob-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .exp-mob-card:active { transform: scale(0.985); box-shadow: 0 4px 20px rgba(212,175,55,0.15); }
+
+        .exp-mob-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding: 13px 14px 10px;
+            gap: 10px;
+        }
+        .exp-mob-card-left { flex: 1; min-width: 0; }
+        .exp-mob-desc {
+            font-size: 14px; font-weight: 700; color: #1e293b;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            margin-bottom: 3px;
+        }
+        .exp-mob-date {
+            font-size: 11px; color: #94a3b8; font-weight: 500;
+        }
+        .exp-mob-note {
+            font-size: 11px; color: #64748b; margin-top: 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .exp-mob-amount-wrap {
+            flex-shrink: 0;
+            text-align: right;
+        }
+        .exp-mob-amount {
+            font-size: 17px; font-weight: 800; color: #1a1200;
+            white-space: nowrap;
+        }
+
+        .exp-mob-card-mid {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 14px 10px;
+            flex-wrap: wrap;
+        }
+
+        .exp-mob-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            background: #f8fafc;
+            border-top: 1px solid #f1f5f9;
+            gap: 8px;
+        }
+
+        .exp-mob-check-wrap {
+            display: flex;
+            align-items: center;
+            padding: 4px;
+        }
+        .exp-mob-check-wrap input[type=checkbox] {
+            width: 18px; height: 18px;
+            accent-color: #d4af37;
+            cursor: pointer;
+        }
+
+        .exp-mob-actions { display: flex; gap: 6px; }
         .exp-mob-btn {
-            flex: 1; padding: 8px; border: none; border-radius: 8px;
-            font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+            padding: 7px 16px; border: none; border-radius: 8px;
+            font-size: 12px; font-weight: 700; cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            display: flex; align-items: center; gap: 4px;
         }
-        .exp-mob-btn:active { opacity: 0.75; }
-        .exp-mob-edit   { background: #fef3c7; color: #92400e; }
+        .exp-mob-btn:active { opacity: 0.75; transform: scale(0.96); }
+        .exp-mob-edit   { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; }
         .exp-mob-delete { background: #fee2e2; color: #991b1b; }
+
+        /* ═══ EXPENSE FILTER BAR MOBILE ═══ */
+        @media (max-width: 600px) {
+            /* Filter bar: compact scrollable pills on top, dropdowns below */
+            #expFilterBar {
+                padding: 12px 12px 10px !important;
+                gap: 10px !important;
+            }
+            #expFilterBar .exp-period-row {
+                overflow-x: auto;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 2px;
+            }
+            #expFilterBar .exp-period-row::-webkit-scrollbar { display: none; }
+
+            #expFilterBar .exp-dropdowns-row {
+                display: flex;
+                gap: 6px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+            }
+            #expFilterBar .exp-dropdowns-row::-webkit-scrollbar { display: none; }
+            #expFilterBar .exp-dropdowns-row select { flex-shrink: 0; font-size: 12px; }
+
+            #expFilterBar .exp-search-row {
+                width: 100%;
+            }
+
+            /* KPI grid: 2 per row on mobile */
+            #expKpiRow {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+                margin-bottom: 14px !important;
+            }
+            .exp-kpi-card {
+                padding: 12px 12px !important;
+                border-radius: 12px !important;
+            }
+            .exp-kpi-value { font-size: 16px !important; }
+            .exp-kpi-label { font-size: 10px !important; }
+
+            /* Card header actions: stacked */
+            #expModuleActionBar {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                width: 100% !important;
+            }
+            #expModuleActionBar .btn {
+                flex: 1 1 auto !important;
+                min-width: calc(50% - 4px) !important;
+                text-align: center !important;
+                justify-content: center !important;
+                white-space: nowrap !important;
+            }
+
+            /* Expense form modal: bottom sheet on mobile */
+            #expenseFormModal {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+            #expenseFormModal > div {
+                border-radius: 20px 20px 0 0 !important;
+                max-width: 100% !important;
+                max-height: 92vh !important;
+                padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+            }
+            #expenseFormModal > div > div:last-child {
+                padding: 16px 16px 8px !important;
+            }
+            /* Form inputs full-width on mobile */
+            #expenseFormModal .form-group { margin-bottom: 12px !important; }
+            #expenseFormModal .form-input,
+            #expenseFormModal textarea.form-input {
+                padding: 11px 12px !important;
+                font-size: 15px !important; /* prevent iOS zoom */
+            }
+            /* Amount + VAT: stack on small phones */
+            #expFormAmountRow { grid-template-columns: 1fr !important; }
+
+            /* Status labels bigger tap area */
+            .exp-status-label { padding: 11px 6px !important; font-size: 13px !important; }
+            .exp-radio-label  { padding: 11px 8px  !important; font-size: 13px !important; }
+
+            /* FAB for expense: show when expense tab active */
+            #expFab {
+                display: none;
+                position: fixed;
+                bottom: calc(68px + env(safe-area-inset-bottom));
+                right: 18px;
+                width: 52px; height: 52px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #d4af37, #b8860b);
+                color: #1a1200;
+                border: none;
+                font-size: 26px;
+                font-weight: 700;
+                box-shadow: 0 4px 18px rgba(212,175,55,0.5);
+                cursor: pointer;
+                z-index: 490;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.2s;
+            }
+            #expFab.visible { display: flex; }
+            #expFab:active  { transform: scale(0.92); }
+
+            /* Bulk delete bar: fixed bottom strip */
+            #expBulkBar {
+                display: none;
+                position: fixed;
+                bottom: calc(58px + env(safe-area-inset-bottom));
+                left: 10px; right: 10px;
+                background: linear-gradient(135deg, #ef4444, #dc2626);
+                color: white;
+                border-radius: 14px;
+                padding: 10px 16px;
+                z-index: 480;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: 0 4px 20px rgba(239,68,68,0.4);
+                font-size: 13px;
+                font-weight: 700;
+            }
+            #expBulkBar.visible { display: flex; }
+        }
 
         /* Expense module nav tab in header */
         #expModuleNavBtn {
@@ -1562,9 +1750,18 @@
             border-radius: 20px; background: rgba(212,175,55,0.08);
             color: #d4af37; font-size: 13px; font-weight: 600; cursor: pointer;
             transition: all 0.2s; font-family: 'Inter', sans-serif;
+            white-space: nowrap;
         }
         #expModuleNavBtn:hover,
         #expModuleNavBtn.active { background: linear-gradient(135deg,#d4af37,#b8860b); color: #1a1200; border-color: transparent; }
+
+        @media (max-width: 600px) {
+            #expModuleNavBtn {
+                font-size: 11px !important;
+                padding: 5px 9px !important;
+                border-radius: 14px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1754,7 +1951,7 @@
         <div class="card" style="margin-top:0;">
             <div class="card-header">
                 <h2 class="card-title">🧾 Quản Lý Chi Phí Tiếp Khách</h2>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <div id="expModuleActionBar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
                     <button class="btn btn-sm" id="expBulkDeleteBtn" onclick="expBulkDelete()" style="display:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;">
                         🗑️ Xóa đã chọn (<span id="expSelectedCount">0</span>)
                     </button>
@@ -1768,58 +1965,59 @@
             </div>
 
             <!-- Filter Bar -->
-            <div style="background:#f8fafc;border-radius:14px;padding:16px;margin-bottom:20px;border:1.5px solid #e2e8f0;">
-                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                    <!-- Period filter buttons -->
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <button class="exp-period-btn active" id="expPeriod-all" onclick="expSetPeriod('all')">Tất cả</button>
-                        <button class="exp-period-btn" id="expPeriod-day"   onclick="expSetPeriod('day')">Ngày</button>
-                        <button class="exp-period-btn" id="expPeriod-month" onclick="expSetPeriod('month')">Tháng</button>
-                        <button class="exp-period-btn" id="expPeriod-quarter" onclick="expSetPeriod('quarter')">Quý</button>
-                        <button class="exp-period-btn" id="expPeriod-year"  onclick="expSetPeriod('year')">Năm</button>
-                    </div>
+            <div id="expFilterBar" style="background:#f8fafc;border-radius:14px;padding:14px 16px;margin-bottom:16px;border:1.5px solid #e2e8f0;display:flex;flex-direction:column;gap:10px;">
 
-                    <!-- Dynamic period selector -->
-                    <div id="expPeriodSelector" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;" class="exp-period-sub">
-                        <select id="expFilterYear" class="exp-filter-select" onchange="expApplyFilter()">
-                        </select>
-                        <select id="expFilterMonth" class="exp-filter-select" style="display:none;" onchange="expApplyFilter()">
-                            <option value="1">Tháng 1</option><option value="2">Tháng 2</option>
-                            <option value="3">Tháng 3</option><option value="4">Tháng 4</option>
-                            <option value="5">Tháng 5</option><option value="6">Tháng 6</option>
-                            <option value="7">Tháng 7</option><option value="8">Tháng 8</option>
-                            <option value="9">Tháng 9</option><option value="10">Tháng 10</option>
-                            <option value="11">Tháng 11</option><option value="12">Tháng 12</option>
-                        </select>
-                        <select id="expFilterQuarter" class="exp-filter-select" style="display:none;" onchange="expApplyFilter()">
-                            <option value="1">Quý 1 (T1-T3)</option>
-                            <option value="2">Quý 2 (T4-T6)</option>
-                            <option value="3">Quý 3 (T7-T9)</option>
-                            <option value="4">Quý 4 (T10-T12)</option>
-                        </select>
-                        <input type="date" id="expFilterDay" class="exp-filter-select" style="display:none;" onchange="expApplyFilter()">
-                    </div>
+                <!-- Row 1: Period buttons (scrollable on mobile) -->
+                <div class="exp-period-row" style="display:flex;gap:6px;">
+                    <button class="exp-period-btn active" id="expPeriod-all"     onclick="expSetPeriod('all')">Tất cả</button>
+                    <button class="exp-period-btn"        id="expPeriod-day"     onclick="expSetPeriod('day')">Ngày</button>
+                    <button class="exp-period-btn"        id="expPeriod-month"   onclick="expSetPeriod('month')">Tháng</button>
+                    <button class="exp-period-btn"        id="expPeriod-quarter" onclick="expSetPeriod('quarter')">Quý</button>
+                    <button class="exp-period-btn"        id="expPeriod-year"    onclick="expSetPeriod('year')">Năm</button>
+                </div>
 
-                    <!-- VAT / Status filter -->
+                <!-- Dynamic period selector -->
+                <div id="expPeriodSelector" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;" class="exp-period-sub">
+                    <select id="expFilterYear" class="exp-filter-select" onchange="expApplyFilter()"></select>
+                    <select id="expFilterMonth" class="exp-filter-select" style="display:none;" onchange="expApplyFilter()">
+                        <option value="1">Tháng 1</option><option value="2">Tháng 2</option>
+                        <option value="3">Tháng 3</option><option value="4">Tháng 4</option>
+                        <option value="5">Tháng 5</option><option value="6">Tháng 6</option>
+                        <option value="7">Tháng 7</option><option value="8">Tháng 8</option>
+                        <option value="9">Tháng 9</option><option value="10">Tháng 10</option>
+                        <option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+                    </select>
+                    <select id="expFilterQuarter" class="exp-filter-select" style="display:none;" onchange="expApplyFilter()">
+                        <option value="1">Quý 1 (T1-T3)</option>
+                        <option value="2">Quý 2 (T4-T6)</option>
+                        <option value="3">Quý 3 (T7-T9)</option>
+                        <option value="4">Quý 4 (T10-T12)</option>
+                    </select>
+                    <input type="date" id="expFilterDay" class="exp-filter-select" style="display:none;" onchange="expApplyFilter()">
+                </div>
+
+                <!-- Row 2: Dropdowns (scrollable on mobile) -->
+                <div class="exp-dropdowns-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <select class="exp-filter-select" id="expFilterVat" onchange="expApplyFilter()">
-                        <option value="all">VAT: Tất cả</option>
+                        <option value="all">🧾 VAT: Tất cả</option>
                         <option value="vat">Có VAT</option>
                         <option value="novat">Không VAT</option>
                     </select>
                     <select class="exp-filter-select" id="expFilterStatus" onchange="expApplyFilter()">
-                        <option value="all">Trạng thái: Tất cả</option>
+                        <option value="all">📌 Trạng thái: Tất cả</option>
                         <option value="done">✅ Done</option>
                         <option value="pending">⏳ Pending</option>
                         <option value="cancel">❌ Cancel</option>
                     </select>
+                </div>
 
-                    <!-- Search -->
-                    <div style="position:relative;flex:1;min-width:160px;">
-                        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:#94a3b8;">🔍</span>
-                        <input type="text" id="expSearchInput" placeholder="Tìm nội dung..." oninput="expApplyFilter()"
-                            style="width:100%;padding:8px 10px 8px 30px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:'Inter',sans-serif;color:#1e293b;background:white;"
-                            onfocus="this.style.borderColor='#d4af37'" onblur="this.style.borderColor='#e2e8f0'">
-                    </div>
+                <!-- Row 3: Search -->
+                <div class="exp-search-row" style="position:relative;">
+                    <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;color:#94a3b8;pointer-events:none;">🔍</span>
+                    <input type="text" id="expSearchInput" placeholder="Tìm nội dung chi tiêu..." oninput="expApplyFilter()"
+                        style="width:100%;padding:9px 12px 9px 34px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;color:#1e293b;background:white;outline:none;box-sizing:border-box;"
+                        onfocus="this.style.borderColor='#d4af37';this.style.boxShadow='0 0 0 3px rgba(212,175,55,0.12)'"
+                        onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'">
                 </div>
             </div>
 
@@ -2288,31 +2486,33 @@
     <div id="expenseFormModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:9000;padding:20px;">
         <div style="background:white;border-radius:20px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,0.4);">
             <!-- Modal header -->
-            <div style="background:linear-gradient(135deg,#1a1200,#2d1f00);padding:20px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;">
+            <div style="background:linear-gradient(135deg,#1a1200,#2d1f00);padding:20px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1;">
+                <!-- Drag handle (mobile) -->
+                <div style="display:none;" id="expFormDragHandle" class="exp-form-drag-handle"></div>
                 <div>
                     <div id="expFormTitle" style="color:#d4af37;font-size:18px;font-weight:800;">➕ Thêm Chi Phí Mới</div>
                     <div style="color:rgba(212,175,55,0.6);font-size:12px;margin-top:2px;">Quản lý chi phí tiếp khách</div>
                 </div>
-                <button onclick="closeExpenseForm()" style="width:34px;height:34px;border:none;background:rgba(212,175,55,0.15);color:#d4af37;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                <button onclick="closeExpenseForm()" style="width:34px;height:34px;border:none;background:rgba(212,175,55,0.15);color:#d4af37;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
             </div>
             <!-- Modal body -->
-            <div style="padding:24px;">
+            <div style="padding:20px 20px 8px;">
                 <input type="hidden" id="expFormId">
 
-                <div class="form-group" style="margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:14px;">
                     <label class="form-label">📅 Ngày</label>
-                    <input type="date" class="form-input" id="expFormDate" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-family:'Inter',sans-serif;">
+                    <input type="date" class="form-input" id="expFormDate" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-family:'Inter',sans-serif;font-size:16px;">
                 </div>
 
-                <div class="form-group" style="margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:14px;">
                     <label class="form-label">📝 Nội dung chi tiêu</label>
-                    <textarea class="form-input" id="expFormDesc" rows="3" placeholder="Mô tả chi tiết khoản chi phí..." style="resize:vertical;background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-family:'Inter',sans-serif;"></textarea>
+                    <textarea class="form-input" id="expFormDesc" rows="2" placeholder="Mô tả khoản chi phí..." style="resize:vertical;background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-family:'Inter',sans-serif;font-size:16px;"></textarea>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+                <div id="expFormAmountRow" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
                     <div class="form-group">
                         <label class="form-label">💰 Chi phí (₫)</label>
-                        <input type="number" class="form-input" id="expFormAmount" placeholder="0" step="1000" min="0" oninput="expPreviewAmount()" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-family:'Inter',sans-serif;">
+                        <input type="number" class="form-input" id="expFormAmount" placeholder="0" step="1000" min="0" oninput="expPreviewAmount()" style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-family:'Inter',sans-serif;font-size:16px;">
                         <div id="expAmountPreview" style="font-size:11px;color:#10b981;font-weight:700;margin-top:4px;"></div>
                     </div>
                     <div class="form-group">
@@ -2330,7 +2530,7 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom:20px;">
+                <div class="form-group" style="margin-bottom:14px;">
                     <label class="form-label">📌 Tình trạng thanh toán</label>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
                         <label class="exp-status-label exp-status-done" id="expStatusDone">
@@ -2348,16 +2548,16 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom:20px;">
-                    <label class="form-label">📎 Ghi chú thêm (tùy chọn)</label>
-                    <input type="text" class="form-input" id="expFormNote" placeholder="Ghi chú, tên khách, địa điểm..." style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-family:'Inter',sans-serif;">
+                <div class="form-group" style="margin-bottom:18px;">
+                    <label class="form-label">📎 Ghi chú (tùy chọn)</label>
+                    <input type="text" class="form-input" id="expFormNote" placeholder="Ghi chú, tên khách, địa điểm..." style="background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-family:'Inter',sans-serif;font-size:16px;">
                 </div>
 
-                <div style="display:flex;gap:12px;">
+                <div style="display:flex;gap:10px;padding-bottom:4px;">
                     <button type="button" onclick="closeExpenseForm()" style="flex:1;padding:13px;border:2px solid #e2e8f0;background:white;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;color:#475569;">
                         Hủy
                     </button>
-                    <button type="button" onclick="saveExpense()" style="flex:1;padding:13px;border:none;background:linear-gradient(135deg,#d4af37,#b8860b);color:#1a1200;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 15px rgba(212,175,55,0.35);">
+                    <button type="button" onclick="saveExpense()" style="flex:2;padding:13px;border:none;background:linear-gradient(135deg,#d4af37,#b8860b);color:#1a1200;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 15px rgba(212,175,55,0.35);">
                         💾 Lưu chi phí
                     </button>
                 </div>
@@ -2365,8 +2565,16 @@
         </div>
     </div>
 
+    <!-- Expense FAB (mobile only) -->
+    <button id="expFab" onclick="showExpenseForm()" title="Thêm chi phí">＋</button>
+
+    <!-- Expense Bulk Delete Bar (mobile) -->
+    <div id="expBulkBar">
+        <span>🗑️ Đã chọn <strong id="expBulkCount">0</strong> khoản</span>
+        <button onclick="expBulkDelete()" style="background:white;color:#dc2626;border:none;border-radius:8px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer;">Xóa tất cả</button>
+    </div>
+
     <script>
-        // ========== AUTH ==========
         // Built-in admin account (stored as seed, users can also register)
         const ADMIN = { username: 'admin', password: 'Connectglobal@123123' };
 
@@ -7524,12 +7732,16 @@ function appendAudit(sheet, d) {
             const btn       = document.getElementById('expModuleNavBtn');
             const mod       = document.getElementById('expenseModule');
             const logistics = document.getElementById('logisticsContent');
+            const fab       = document.getElementById('expFab');
+            const bulkBar   = document.getElementById('expBulkBar');
+            const isMob     = typeof IS_MOBILE === 'function' ? IS_MOBILE() : window.innerWidth <= 600;
             if (!mod) return;
 
             if (show) {
                 mod.style.display = 'block';
                 if (logistics) logistics.style.display = 'none';
                 if (btn) btn.classList.add('active');
+                if (fab) fab.classList.toggle('visible', isMob);
                 expPopulateYears();
                 expApplyFilter();
                 window.scrollTo(0, 0);
@@ -7537,6 +7749,8 @@ function appendAudit(sheet, d) {
                 mod.style.display = 'none';
                 if (logistics) logistics.style.display = '';
                 if (btn) btn.classList.remove('active');
+                if (fab) fab.classList.remove('visible');
+                if (bulkBar) bulkBar.classList.remove('visible');
             }
         }
 
@@ -7696,43 +7910,65 @@ function appendAudit(sheet, d) {
         function expRenderMobileCards(list) {
             const isMob = typeof IS_MOBILE === 'function' ? IS_MOBILE() : window.innerWidth <= 600;
             const tableWrap = document.getElementById('expTableWrap');
-            const cardList = document.getElementById('expMobileCardList');
+            const cardList  = document.getElementById('expMobileCardList');
             if (!tableWrap || !cardList) return;
             if (isMob) {
                 tableWrap.style.display = 'none';
-                cardList.style.display = 'block';
+                cardList.style.display  = 'block';
             } else {
                 tableWrap.style.display = '';
-                cardList.style.display = 'none';
+                cardList.style.display  = 'none';
                 return;
             }
+
+            // Manage FAB visibility
+            const fab = document.getElementById('expFab');
+            if (fab) fab.classList.toggle('visible', expenseModuleVisible);
+
             if (list.length === 0) {
-                cardList.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#94a3b8;"><div style="font-size:36px;margin-bottom:12px;">🧾</div><div style="font-weight:700;font-size:15px;color:#1e293b;margin-bottom:6px;">Chưa có khoản chi phí</div><div style="font-size:13px;">Nhấn ➕ Thêm chi phí để bắt đầu</div></div>`;
+                cardList.innerHTML = `
+                    <div style="text-align:center;padding:48px 20px;color:#94a3b8;">
+                        <div style="font-size:44px;margin-bottom:14px;">🧾</div>
+                        <div style="font-weight:800;font-size:16px;color:#1e293b;margin-bottom:6px;">Chưa có khoản chi phí</div>
+                        <div style="font-size:13px;line-height:1.5;">Nhấn nút <strong style="color:#d4af37;">＋</strong> bên dưới để thêm</div>
+                    </div>`;
                 return;
             }
-            cardList.innerHTML = list.map(e => `
+
+            cardList.innerHTML = list.map(e => {
+                const statusColor = e.status === 'done' ? '#10b981' : e.status === 'cancel' ? '#ef4444' : '#f59e0b';
+                return `
                 <div class="exp-mob-card">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                        <input type="checkbox" class="exp-row-check" value="${e.id}" onclick="expUpdateBulkBar()" style="width:16px;height:16px;">
-                        <div class="exp-mob-header" style="flex:1;margin-bottom:0;">
+                    <!-- Top: desc + amount -->
+                    <div class="exp-mob-card-top">
+                        <div class="exp-mob-card-left">
                             <div class="exp-mob-desc">${escapeHtml(e.desc || '—')}</div>
-                            <div class="exp-mob-date">${expFmtDate(e.date)}</div>
+                            <div class="exp-mob-date">📅 ${expFmtDate(e.date)}</div>
+                            ${e.note ? `<div class="exp-mob-note">💬 ${escapeHtml(e.note)}</div>` : ''}
+                        </div>
+                        <div class="exp-mob-amount-wrap">
+                            <div class="exp-mob-amount">${new Intl.NumberFormat('vi-VN').format(e.amount || 0)}₫</div>
                         </div>
                     </div>
-                    ${e.note ? `<div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">${escapeHtml(e.note)}</div>` : ''}
-                    <div class="exp-mob-amount">${new Intl.NumberFormat('vi-VN').format(e.amount || 0)}₫</div>
-                    <div class="exp-mob-pills">
+                    <!-- Mid: badges -->
+                    <div class="exp-mob-card-mid">
                         ${e.vat === 'vat'
                             ? '<span class="exp-badge exp-badge-vat">🧾 Có VAT</span>'
-                            : '<span class="exp-badge exp-badge-novat">— Không VAT</span>'}
+                            : '<span class="exp-badge exp-badge-novat">Không VAT</span>'}
                         ${expStatusBadge(e.status)}
                     </div>
-                    <div class="exp-mob-actions">
-                        <button class="exp-mob-btn exp-mob-edit" onclick="showExpenseForm(${e.id})">✏️ Sửa</button>
-                        <button class="exp-mob-btn exp-mob-delete" onclick="expDeleteOne(${e.id})">🗑️ Xóa</button>
+                    <!-- Footer: checkbox + actions -->
+                    <div class="exp-mob-card-footer">
+                        <label class="exp-mob-check-wrap" title="Chọn để xóa hàng loạt">
+                            <input type="checkbox" class="exp-row-check" value="${e.id}" onclick="expUpdateBulkBar()">
+                        </label>
+                        <div class="exp-mob-actions">
+                            <button class="exp-mob-btn exp-mob-edit"   onclick="showExpenseForm(${e.id})">✏️ Sửa</button>
+                            <button class="exp-mob-btn exp-mob-delete" onclick="expDeleteOne(${e.id})">🗑️</button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         // ── Bulk selection ─────────────────────────────────────────────
@@ -7751,6 +7987,12 @@ function appendAudit(sheet, d) {
                 document.getElementById('expSelectedCount').textContent = checked;
             }
             if (allCb) allCb.checked = checked > 0 && checked === total;
+
+            // Mobile bulk bar
+            const bulkBar = document.getElementById('expBulkBar');
+            const bulkCount = document.getElementById('expBulkCount');
+            if (bulkBar) bulkBar.classList.toggle('visible', checked > 0);
+            if (bulkCount) bulkCount.textContent = checked;
         }
 
         function expBulkDelete() {
