@@ -2762,6 +2762,7 @@
                 showFbMsg('✅ Kết nối thành công! Đang lắng nghe dữ liệu realtime...', '#d1fae5', '#065f46');
                 // Bắt đầu lắng nghe realtime
                 startFirebaseListener();
+                startExpensesFirebaseListener();
                 // Cập nhật modal status
                 const s = document.getElementById('fbModalStatus');
                 if (s) { s.textContent = '✅ Đã kết nối Firebase'; s.style.background = '#d1fae5'; s.style.color = '#065f46'; s.style.border = '1px solid #6ee7b7'; }
@@ -2788,13 +2789,16 @@
             }
             const local = localStorage.getItem('shipments');
             const arr = local ? JSON.parse(local) : [];
-            if (arr.length === 0) {
+            const localExp = localStorage.getItem('lg_expenses');
+            const arrExp = localExp ? JSON.parse(localExp) : [];
+            if (arr.length === 0 && arrExp.length === 0) {
                 showFbMsg('⚠️ Không có dữ liệu localStorage để migrate', '#fef3c7', '#92400e');
                 return;
             }
             try {
-                await FIREBASE.setAllShipments(arr);
-                showFbMsg(`✅ Đã migrate ${arr.length} lô hàng lên Firebase!`, '#d1fae5', '#065f46');
+                if (arr.length > 0) await FIREBASE.setAllShipments(arr);
+                if (arrExp.length > 0) await FIREBASE.setAllExpenses(arrExp);
+                showFbMsg(`✅ Đã migrate ${arr.length} lô hàng + ${arrExp.length} chi phí lên Firebase!`, '#d1fae5', '#065f46');
             } catch(e) {
                 showFbMsg('❌ Migrate thất bại: ' + e.message, '#fee2e2', '#991b1b');
             }
@@ -3487,8 +3491,10 @@ function appendAudit(sheet, d) {
             db: null,
             shipmentsRef: null,
             auditRef: null,
+            expensesRef: null,
             connected: false,
             unsubscribe: null,
+            unsubscribeExpenses: null,
 
             // Lấy config đã lưu
             getConfig() {
@@ -3511,6 +3517,7 @@ function appendAudit(sheet, d) {
                     this.db = firebase.database();
                     this.shipmentsRef = this.db.ref('shipments');
                     this.auditRef     = this.db.ref('auditLog');
+                    this.expensesRef  = this.db.ref('expenses');
                     this.connected = true;
                     this.saveConfig(cfg);
                     this.showStatus(true);
@@ -3561,6 +3568,39 @@ function appendAudit(sheet, d) {
                 await this.auditRef.push(entry);
             },
 
+            // ── EXPENSES ──────────────────────────────────────────────────
+            // Lắng nghe thay đổi realtime của expenses
+            listenExpenses(callback) {
+                if (!this.expensesRef) return;
+                if (this.unsubscribeExpenses) this.unsubscribeExpenses();
+                const ref = this.expensesRef;
+                const handler = ref.on('value', snap => {
+                    const val = snap.val();
+                    callback(val ? Object.values(val) : []);
+                }, err => console.error('Firebase expenses listen error:', err));
+                this.unsubscribeExpenses = () => ref.off('value', handler);
+            },
+
+            // Ghi 1 expense (thêm hoặc sửa)
+            async setExpense(exp) {
+                if (!this.expensesRef) return;
+                await this.expensesRef.child(String(exp.id)).set(exp);
+            },
+
+            // Xoá 1 expense
+            async removeExpense(id) {
+                if (!this.expensesRef) return;
+                await this.expensesRef.child(String(id)).remove();
+            },
+
+            // Ghi toàn bộ expenses (dùng khi migrate)
+            async setAllExpenses(arr) {
+                if (!this.expensesRef) return;
+                const obj = {};
+                arr.forEach(e => { obj[String(e.id)] = e; });
+                await this.expensesRef.set(obj);
+            },
+
             showStatus(ok, msg) {
                 const el = document.getElementById('fbStatusBadge');
                 if (!el) return;
@@ -3588,6 +3628,31 @@ function appendAudit(sheet, d) {
             localStorage.setItem('shipments', JSON.stringify(shipments));
         }
 
+        // ── Expense DB wrappers ────────────────────────────────────────────
+        // Lưu 1 expense lên Firebase + localStorage
+        function saveExpenseDB(exp) {
+            localStorage.setItem('lg_expenses', JSON.stringify(expenses));
+            if (FIREBASE.connected) FIREBASE.setExpense(exp).catch(console.error);
+        }
+
+        // Xoá 1 expense trên Firebase + localStorage
+        function removeExpenseDB(id) {
+            localStorage.setItem('lg_expenses', JSON.stringify(expenses));
+            if (FIREBASE.connected) FIREBASE.removeExpense(id).catch(console.error);
+        }
+
+        // Khởi động realtime listener cho expenses
+        function startExpensesFirebaseListener() {
+            FIREBASE.listenExpenses(function(remoteExpenses) {
+                // Merge: remote là nguồn chính, local chỉ là fallback
+                expenses = remoteExpenses.sort((a, b) => (b.id || 0) - (a.id || 0));
+                localStorage.setItem('lg_expenses', JSON.stringify(expenses));
+                // Re-render nếu module đang mở
+                if (expenseModuleVisible) expApplyFilter();
+                console.log('🔥 Expenses synced from Firebase:', expenses.length);
+            });
+        }
+
         // ================================================================
 
         // Initialize
@@ -3601,6 +3666,7 @@ function appendAudit(sheet, d) {
                 const ok = FIREBASE.init(savedFbCfg);
                 if (ok) {
                     startFirebaseListener();
+                    startExpensesFirebaseListener();
                     console.log('🔥 Firebase auto-connected');
                 }
             }
@@ -7430,13 +7496,19 @@ function appendAudit(sheet, d) {
         let expFilteredList = [];
         let expenseModuleVisible = false;
 
-        // Load expenses from localStorage
+        // Load expenses: ưu tiên Firebase (nếu đã kết nối listener), fallback localStorage
         function loadExpenses() {
             try {
                 expenses = JSON.parse(localStorage.getItem('lg_expenses') || '[]');
             } catch(e) { expenses = []; }
+            // Nếu Firebase đã kết nối → listener sẽ tự cập nhật qua startExpensesFirebaseListener
+            if (FIREBASE.connected) {
+                startExpensesFirebaseListener();
+            }
         }
 
+        // saveExpenses: lưu localStorage + đồng bộ Firebase cho 1 expense cụ thể
+        // Dùng saveExpenseDB(exp) thay thế khi có 1 expense cần lưu
         function saveExpenses() {
             localStorage.setItem('lg_expenses', JSON.stringify(expenses));
         }
@@ -7688,6 +7760,8 @@ function appendAudit(sheet, d) {
             const ids = Array.from(checked).map(cb => parseInt(cb.value));
             expenses = expenses.filter(e => !ids.includes(e.id));
             saveExpenses();
+            // Xoá từng id trên Firebase
+            ids.forEach(id => removeExpenseDB(id));
             expApplyFilter();
             showNotification(`✅ Đã xóa ${ids.length} khoản chi phí`, 'success');
         }
@@ -7696,6 +7770,7 @@ function appendAudit(sheet, d) {
             if (!confirm('Xóa khoản chi phí này?')) return;
             expenses = expenses.filter(e => e.id !== id);
             saveExpenses();
+            removeExpenseDB(id);
             expApplyFilter();
             showNotification('✅ Đã xóa khoản chi phí', 'success');
         }
@@ -7789,6 +7864,7 @@ function appendAudit(sheet, d) {
                 const idx = expenses.findIndex(e => e.id === parseInt(editId));
                 if (idx !== -1) {
                     expenses[idx] = { ...expenses[idx], date, desc, amount, vat, status, note, updatedAt: new Date().toISOString() };
+                    saveExpenseDB(expenses[idx]);
                     showNotification('✅ Đã cập nhật chi phí: ' + desc, 'success');
                 }
             } else {
@@ -7800,6 +7876,7 @@ function appendAudit(sheet, d) {
                     updatedAt: new Date().toISOString(),
                 };
                 expenses.unshift(newExp);
+                saveExpenseDB(newExp);
                 showNotification('✅ Đã thêm chi phí: ' + desc, 'success');
             }
             saveExpenses();
