@@ -1744,6 +1744,18 @@
             #expBulkBar.visible { display: flex; }
         }
 
+        /* FAB: hidden by default, only shown on mobile via JS */
+        #expFab { display: none !important; }
+        @media (max-width: 600px) {
+            #expFab.visible { display: flex !important; }
+        }
+
+        /* Bulk bar: hidden by default on all screen sizes, only shown via JS on mobile */
+        #expBulkBar { display: none !important; }
+        @media (max-width: 600px) {
+            #expBulkBar.visible { display: flex !important; }
+        }
+
         /* Expense module nav tab in header */
         #expModuleNavBtn {
             padding: 8px 18px; border: 1.5px solid rgba(212,175,55,0.3);
