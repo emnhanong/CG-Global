@@ -5304,6 +5304,11 @@ function appendAudit(sheet, d) {
             shipments = JSON.parse(JSON.stringify(lastState.data));
             saveAllShipmentsDB();
             
+            // ✅ FIX: Sync toàn bộ shipments lên Firebase sau undo
+            if (FIREBASE.connected) {
+                FIREBASE.setAllShipments(shipments).catch(console.error);
+            }
+            
             // Sync toàn bộ dữ liệu sau undo lên Sheets (ghi log audit)
             logAuditToSheets('UNDO', `Hoàn tác: ${lastState.action}`, shipments.slice(0, 5));
             
@@ -6150,6 +6155,9 @@ function appendAudit(sheet, d) {
             const restored = { ...item, restoredAt: new Date().toISOString(), profit: item.profit || 0 };
             shipments.unshift(restored);
             saveAllShipmentsDB();
+            // ✅ FIX: Sync lên Firebase
+            if (FIREBASE.connected) FIREBASE.setShipment(restored).catch(console.error);
+            logAuditAction('RESTORE', `Khôi phục lô hàng đã xóa: ${item.company}`, restored);
 
             // Sync to Google Sheets
             syncShipmentToSheets(restored, 'ADD');
@@ -6185,6 +6193,11 @@ function appendAudit(sheet, d) {
             history.splice(entryIdx, 1);
             saveDeleteHistory(history);
             saveAllShipmentsDB();
+            // ✅ FIX: Sync từng lô được khôi phục lên Firebase
+            if (FIREBASE.connected) {
+                restoredItems.forEach(s => FIREBASE.setShipment(s).catch(console.error));
+            }
+            logAuditAction('RESTORE', `Khôi phục hàng loạt ${restoredCount} lô hàng đã xóa`, restoredItems);
 
             // Sync to Google Sheets
             restoredItems.forEach(s => syncShipmentToSheets(s, 'ADD'));
@@ -6501,9 +6514,13 @@ function appendAudit(sheet, d) {
                     shipments = [];
                     localStorage.removeItem('shipments');
                     
+                    // ✅ FIX: Xóa toàn bộ trên Firebase
+                    if (FIREBASE.connected) {
+                        FIREBASE.setAllShipments([]).catch(console.error);
+                    }
+                    
                     updateDashboard();
                     renderShipments();
-                    
                     
                     showNotification('✅ Đã xóa tất cả!');
                 }
@@ -6531,6 +6548,11 @@ function appendAudit(sheet, d) {
                 });
                 
                 saveAllShipmentsDB();
+                
+                // ✅ FIX: Sync toàn bộ lên Firebase sau khi tính lại
+                if (FIREBASE.connected) {
+                    FIREBASE.setAllShipments(shipments).catch(console.error);
+                }
                 
                 // Sync updated shipments to Google Sheets
                 if (updated > 0) {
