@@ -5226,6 +5226,11 @@ function appendAudit(sheet, d) {
             const affectedShipments = shipments.filter(s => ids.includes(s.id));
             logAuditAction('BULK_EDIT_STATUS', `Sửa trạng thái hàng loạt ${updatedCount} lô → ${statusText}`, affectedShipments);
             
+            // ✅ FIX: Sync lên Firebase để persist sau khi refresh
+            if (FIREBASE.connected) {
+                affectedShipments.forEach(s => FIREBASE.setShipment(s).catch(console.error));
+            }
+            
             // Sync to Google Sheets
             affectedShipments.forEach(s => syncShipmentToSheets(s, 'UPDATE'));
             logAuditToSheets('BULK_EDIT_STATUS', `Sửa trạng thái hàng loạt ${updatedCount} lô → ${statusText}`, affectedShipments);
@@ -7697,10 +7702,12 @@ function appendAudit(sheet, d) {
 
             const old = shipments[idx];
             shipments[idx] = updated;
-            saveData();
-            if (typeof logAction === 'function') {
-                logAction('EDIT', updated, old);
-            }
+            // ✅ FIX: Dùng đúng hàm save + sync Firebase
+            saveAllShipmentsDB();
+            if (FIREBASE.connected) FIREBASE.setShipment(updated).catch(console.error);
+            logAuditAction('EDIT', `Sửa lô hàng (mobile): ${updated.company}`, updated, old);
+            syncShipmentToSheets(updated, 'UPDATE');
+            logAuditToSheets('EDIT', `Sửa lô hàng (mobile): ${updated.company}`, updated, old);
             renderShipments();
             updateDashboard && updateDashboard();
             closeMobEditSheet();
